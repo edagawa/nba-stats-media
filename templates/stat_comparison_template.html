@@ -6,11 +6,16 @@
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
+    <header>
+        <h1>指標別比較: {{ stat_name_jp }}</h1>
+        <nav>
+            <a href="../index.html">チーム一覧</a>
+        </nav>
+    </header>
     <main class="container">
         <div class="breadcrumb">
             <a href="../index.html">トップページ</a> &gt; <span>指標別ランキング</span> &gt; <span>{{ stat_name_jp }}</span>
         </div>
-        <h1>指標別比較: {{ stat_name_jp }}</h1>
         <h2>全チーム比較グラフ (2023-24 vs 2024-25)</h2>
         <p>2024-25シーズンのスタッツを基準に降順（DEF EFFのみ昇順）でソートしています。</p>
         <div class="stat-graph">
