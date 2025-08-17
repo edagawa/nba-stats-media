@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>指標別比較: {{ stat_name }} | NBA Stats</title>
+    <title>指標別比較: {{ stat_name_jp }} | NBA Stats</title>
     <style>
         body { font-family: sans-serif; line-height: 1.6; max-width: 1200px; margin: auto; padding: 20px; }
         h1, h2 { color: #003366; text-align: center; }
@@ -11,6 +11,11 @@
         th { background-color: #f2f2f2; }
         img { max-width: 100%; height: auto; display: block; margin: 20px 0; border: 1px solid #ddd; }
         .nav-link { margin-bottom: 20px; }
+        footer { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
+        footer ul { list-style-type: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
+        footer li { margin: 5px; }
+        footer a { text-decoration: none; color: white; background-color: #6c757d; padding: 8px 15px; border-radius: 5px; font-size: 0.9em; }
+        footer a:hover { background-color: #5a6268; }
     </style>
 </head>
 <body>
@@ -23,5 +28,20 @@
     
     <h2>詳細データ</h2>
     {{ data_table_html|safe }}
-</body>
+
+    <footer>
+        <h2>チーム別比較</h2>
+        <ul>
+            {% for team in all_teams %}
+            <li><a href="{{ team.url }}">{{ team.name }}</a></li>
+            {% endfor %}
+        </ul>
+        <h2 style="margin-top: 20px;">指標別ランキング</h2>
+        <ul>
+            {% for stat in stat_pages %}
+            <li><a href="{{ stat.url|replace('./', '../') }}">{{ stat.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </footer>
+    </body>
 </html>
