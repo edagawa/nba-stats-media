@@ -36,6 +36,7 @@ def generate_season_summary_text(team_data):
     ast = float(team_data['AST'])
     reb = float(team_data['REB'])
     
+    # ★★★ ここのテキストを修正 ★★★
     summary = "{0}は、2023-24シーズンを{1}で終えました。平均{2:.1f}得点、{3:.1f}アシスト、{4:.1f}リバウンドを記録し、安定したシーズンを送りました。".format(team_name, win_loss_text, pts, ast, reb)
     return summary
 
@@ -50,7 +51,6 @@ def generate_team_pages(team_stats_df):
     for index, row in team_stats_df.iterrows():
         summary_text = generate_season_summary_text(row)
         
-        # ★★★ このブロックの閉じ括弧が抜けていました ★★★
         report_data = {
             'team_name': row['Team'],
             'summary_text': summary_text,
