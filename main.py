@@ -62,6 +62,21 @@ STATS_TO_GENERATE = {
     'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating'
 }
 
+# ★★★ 修正点1: チーム名の不一致を吸収するための対応表 ★★★
+TEAM_NAME_MAP = {
+    "Atlanta": "Atlanta Hawks", "Boston": "Boston Celtics", "Brooklyn": "Brooklyn Nets",
+    "Charlotte": "Charlotte Hornets", "Chicago": "Chicago Bulls", "Cleveland": "Cleveland Cavaliers",
+    "Dallas": "Dallas Mavericks", "Denver": "Denver Nuggets", "Detroit": "Detroit Pistons",
+    "Golden State": "Golden State Warriors", "Houston": "Houston Rockets", "Indiana": "Indiana Pacers",
+    "LA Clippers": "LA Clippers", "LA Lakers": "Los Angeles Lakers", "Memphis": "Memphis Grizzlies",
+    "Miami": "Miami Heat", "Milwaukee": "Milwaukee Bucks", "Minnesota": "Minnesota Timberwolves",
+    "New Orleans": "New Orleans Pelicans", "New York": "New York Knicks", "Oklahoma City": "Oklahoma City Thunder",
+    "Orlando": "Orlando Magic", "Philadelphia": "Philadelphia 76ers", "Phoenix": "Phoenix Suns",
+    "Portland": "Portland Trail Blazers", "Sacramento": "Sacramento Kings", "San Antonio": "San Antonio Spurs",
+    "Toronto": "Toronto Raptors", "Utah": "Utah Jazz", "Washington": "Washington Wizards"
+}
+
+
 # --- ヘルパー関数 ---
 def get_footer_data(team_path_prefix, stat_path_prefix):
     """フッター用のナビゲーションデータを、ページの階層に合わせて生成する"""
@@ -92,6 +107,7 @@ def generate_glossary_page(env):
     """指標解説ページ(glossary.html)を生成する"""
     print("--- 指標解説ページの生成開始 ---")
     template = env.get_template('glossary_template.html')
+    # ★★★ 修正点2: Net Ratingの説明を追加 ★★★
     glossary_items = [
         {'term': 'Pace', 'description': '1試合あたり48分間のポゼッション（攻撃回数）の推定値。'},
         {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'},
@@ -207,8 +223,6 @@ def generate_stat_pages(df_s1, df_s2, env):
                 'stat_name_en': stat_filename,
                 'data_table_html': df_merged.rename(columns={f'{stat_short}_s1': '2023-24', f'{stat_short}_s2': '2024-25'}).to_html(),
                 'stat_pages': stat_pages,
-                # ★★★ 修正点 ★★★
-                # 'all_team_structured' -> 'all_teams_structured' にタイポを修正
                 'all_teams_structured': all_teams_structured
             }
             output_path = f"output/stats/{stat_filename}.html"
@@ -236,6 +250,12 @@ if __name__ == "__main__":
         df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
         print("CSVファイルの読み込みに成功しました。")
 
+        # ★★★ 修正点1: CSV内のチーム名を正式名称に統一する ★★★
+        df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP)
+        df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
+        print("チーム名を正式名称に統一しました。")
+
+
         # NET EFF（得失点差）の列を計算して追加する
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']
         df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
@@ -244,9 +264,9 @@ if __name__ == "__main__":
     except FileNotFoundError as e:
         print(f"エラー: データファイルが見つかりません。{e}")
         print("get_data.py と get_data_24-25.py を実行して、CSVファイルを先に生成してください。")
-        sys.exit(1) # エラーが見つかったのでスクリプトを終了
+        sys.exit(1)
     except KeyError as e:
-        print(f"エラー: CSVファイルに必要な列（OFF EFFまたはDEF EFF）が存在しません。{e}")
+        print(f"エラー: CSVファイルに必要な列が存在しません。{e}")
         print("CSVファイルの内容を確認してください。")
         sys.exit(1)
 
