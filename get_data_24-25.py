@@ -10,14 +10,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
-def fetch_and_save_espn_stats(year):
+def fetch_and_save_espn_stats_24_25():
     """
-    指定されたシーズンのチーム統計をスクレイピングし、CSVファイルに保存する。
-    year: 2024 -> 2023-24シーズン
+    Seleniumでブラウザを操作してESPNのページから2024-25シーズンのチーム統計を取得し、
+    CSVファイルに保存する。
     """
-    season_string = "{0}-{1}".format(year - 1, str(year)[-2:])
-    url = "https://www.espn.com/nba/stats/team/_/season/{0}/seasontype/2".format(year)
-    print("ESPNから{0}シーズンのデータを取得しています...".format(season_string))
+    # ★★★ URLを2024-25シーズンに変更 ★★★
+    url = "https://www.espn.com/nba/stats/team/_/season/2025/seasontype/2"
+    print("ESPNから2024-25シーズンのデータを取得しています...")
     print("（自動でChromeブラウザが起動します...）")
 
     options = webdriver.ChromeOptions()
@@ -30,11 +30,13 @@ def fetch_and_save_espn_stats(year):
     try:
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
+        
         driver.get(url)
         
         WebDriverWait(driver, 30).until(
             EC.presence_of_element_located((By.CLASS_NAME, "Table__TBODY"))
         )
+        
         time.sleep(3)
         
         html = driver.page_source
@@ -44,6 +46,7 @@ def fetch_and_save_espn_stats(year):
 
         team_names = []
         team_logo_spans = soup.select('span.TeamLink__Logo')
+
         for span in team_logo_spans:
             img_tag = span.find('img')
             if img_tag and img_tag.has_attr('title'):
@@ -67,14 +70,15 @@ def fetch_and_save_espn_stats(year):
         print("統計データを {0} 行取得しました。".format(stats_df.shape[0]))
 
         if len(team_names) != stats_df.shape[0]:
-            raise ValueError("チーム名の数と統計データの行数が一致しません。")
+            raise ValueError("チーム名の数 ({0}) と統計データの行数 ({1}) が一致しません。".format(len(team_names), stats_df.shape[0]))
 
         stats_df.insert(0, 'Team', team_names)
         
         columns = ['Team', 'GP', 'PTS', 'FGM', 'FGA', 'FG%', '3PM', '3PA', '3P%', 'FTM', 'FTA', 'FT%', 'OR', 'DR', 'REB', 'AST', 'STL', 'BLK', 'TO', 'PF']
         stats_df.columns = columns
 
-        file_path = "espn_team_stats_{0}.csv".format(season_string)
+        # ★★★ 保存ファイル名を変更 ★★★
+        file_path = "espn_team_stats_24-25.csv"
         stats_df.to_csv(file_path, index=False)
         print("データを '{0}' に正常に保存しました。".format(file_path))
 
@@ -85,6 +89,4 @@ def fetch_and_save_espn_stats(year):
             driver.quit()
 
 if __name__ == "__main__":
-    # 2シーズン分のデータを取得
-    fetch_and_save_espn_stats(2024) # 2023-24シーズン
-    fetch_and_save_espn_stats(2025) # 2024-25シーズン
+    fetch_and_save_espn_stats_24_25()

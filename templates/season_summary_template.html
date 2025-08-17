@@ -1,32 +1,23 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-TN64ZP');</script>
+<head>
     <meta charset="UTF-8">
-    <title>{{ team_name }}｜NBA｜2023-24シーズン データサマリー</title>
+    <title>{{ team_name }}｜NBA｜{{ season_string }}シーズン データサマリー</title>
     <style>
-      body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
-      h1, h2 { color: #003366; }
-      table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-      th { background-color: #f2f2f2; }
+        body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
+        h1, h2 { color: #003366; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
     </style>
-  </head>
-  <body>
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TN64ZP"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+</head>
+<body>
     <p><a href="{{ main_page_url }}">トップページに戻る</a></p>
-    <h1>{{ team_name }} 2023-24シーズン データサマリー</h1>
+    <h1>{{ team_name }} {{ season_string }}シーズン データサマリー</h1>
     
     <p>{{ summary_text }}</p>
-
     <h2>主要スタッツ（シーズン平均）</h2>
     {{ team_stats_html|safe }}
-
     <p>※ このデータはESPNの公開データを元に自動生成されています。</p>
-  </body>
+</body>
 </html>
