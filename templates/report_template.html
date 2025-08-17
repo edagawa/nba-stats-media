@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
+        h1, h2 { color: #003366; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        svg { max-width: 100%; height: auto; display: block; margin: 20px 0; }
+        .highlight { font-weight: bold; color: #d9534f; }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    
+    <h2>試合のハイライト：</h2>
+    <p>{{ highlight_text }}</p>
+
+    <h2>試合のスコア推移</h2>
+    <img src="images/game_flow_{{ game_id }}.svg" alt="スコア推移グラフ">
+
+    <h2>ボックススコア</h2>
+    {{ boxscore_html|safe }}
+
+</body>
+</html>
