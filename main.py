@@ -70,6 +70,7 @@ def get_footer_data(team_path_prefix, stat_path_prefix):
     for conf, divisions in CONFERENCE_STRUCTURE.items():
         all_teams_structured[conf] = {}
         for div, teams_in_div in divisions.items():
+            # ★★★ ここで生成されるURLがファイル名と一致することが重要 ★★★
             all_teams_structured[conf][div] = [{'name': team, 'url': f"{team_path_prefix}comparison_{team.replace(' ', '_')}.html"} for team in teams_in_div]
     return stat_pages, all_teams_structured
 
@@ -141,6 +142,7 @@ def generate_comparison_pages(df_s1, df_s2, env):
             ax.legend()
             fig.tight_layout()
             
+            # ★★★ ここで生成されるファイル名がリンクURLと一致することが重要 ★★★
             image_filename = team.replace(' ', '_')
             plt.savefig(f"output/images/comparison_{image_filename}.svg", format="svg")
             plt.close()
