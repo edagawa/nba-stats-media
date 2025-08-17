@@ -17,6 +17,9 @@
         footer a { text-decoration: none; color: white; background-color: #6c757d; padding: 8px 15px; border-radius: 5px; font-size: 0.9em; }
         footer a:hover { background-color: #5a6268; }
         .division-group { width: 100%; margin-bottom: 20px; }
+        .glossary-link { text-align: center; margin-top: 15px; }
+        .glossary-link a { background-color: #28a745; }
+        .glossary-link a:hover { background-color: #218838; }
     </style>
 </head>
 <body>
@@ -51,6 +54,9 @@
             <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
             {% endfor %}
         </ul>
+        <div class="glossary-link">
+            <a href="../glossary.html">指標の解説 (Glossary) はこちら</a>
+        </div>
     </footer>
 </body>
 </html>
