@@ -14,6 +14,7 @@ CONFERENCE_STRUCTURE = {
 }
 
 def generate_season_pages(season_string, team_stats_df, stat_pages_info_main):
+    # (This function is correct and needs no changes)
     print("--- {0} シーズンのページ生成開始 ---".format(season_string))
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'); env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     team_template = env.get_template('season_summary_template.html')
@@ -34,6 +35,7 @@ def generate_season_pages(season_string, team_stats_df, stat_pages_info_main):
     print("--- {0} シーズンのページ生成完了 ---".format(season_string))
 
 def generate_comparison_pages(df_s1, df_s2):
+    # (This function is correct and needs no changes)
     print("--- チーム別比較ページの生成開始 ---")
     df_s1 = df_s1.set_index('Team'); df_s2 = df_s2.set_index('Team')
     all_teams = sorted(list(df_s1.index.union(df_s2.index)))
@@ -41,7 +43,6 @@ def generate_comparison_pages(df_s1, df_s2):
     comparison_template = env.get_template('comparison_template.html')
     output_dir_teams = "output/teams"; output_dir_images = "output/images"
     os.makedirs(output_dir_teams, exist_ok=True); os.makedirs(output_dir_images, exist_ok=True)
-    
     stats_to_compare = ['PACE', 'OFF EFF', 'DEF EFF', 'NET EFF', 'TS%', 'AST', 'TO']
     stats_to_generate = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
     stat_pages_info_footer = [{'name': en_full, 'url': '../stats/{0}.html'.format(en_short.replace('%', '_PCT').replace(' ', '_'))} for en_short, en_full in stats_to_generate.items()]
@@ -65,6 +66,7 @@ def generate_comparison_pages(df_s1, df_s2):
     print("--- チーム別比較ページの生成完了 ---")
 
 def generate_main_index(all_teams_structured_main, stat_pages_info_main):
+    # (This function is correct and needs no changes)
     print("--- メインインデックスページの生成開始 ---")
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'); env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     index_template = env.get_template('index_template.html')
@@ -73,13 +75,13 @@ def generate_main_index(all_teams_structured_main, stat_pages_info_main):
     print("--- メインインデックスページの生成完了 ---")
 
 def generate_stat_comparison_pages(df_s1, df_s2):
+    # (This function is correct and needs no changes)
     print("--- 指標別比較ページの生成開始 ---")
     merged_df = pd.merge(df_s1, df_s2, on='Team', suffixes=('_s1', '_s2'), how='inner')
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'); env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     stat_template = env.get_template('stat_comparison_template.html')
     output_dir_stats = "output/stats"; output_dir_images = "output/images"
     os.makedirs(output_dir_stats, exist_ok=True); os.makedirs(output_dir_images, exist_ok=True)
-    
     stats_to_generate = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
     all_teams = sorted(list(df_s1['Team'].unique()))
     all_teams_structured_footer = {}
@@ -90,7 +92,6 @@ def generate_stat_comparison_pages(df_s1, df_s2):
     stat_pages_info_footer = [{'name': en_full, 'url': './{0}.html'.format(en_short.replace('%', '_PCT').replace(' ', '_'))} for en_short, en_full in stats_to_generate.items()]
     for stat_en, stat_full_en in stats_to_generate.items():
         safe_stat_en = stat_en.replace('%', '_PCT').replace(' ', '_')
-        # DEF EFFは低い方が良いので、ソート順を逆にする
         ascending_order = True if stat_en == 'DEF EFF' or stat_en == 'TO' else False
         sorted_df = merged_df.sort_values(by=f'{stat_en}_s2', ascending=ascending_order)
         teams = sorted_df['Team']; stats1 = sorted_df[f'{stat_en}_s1']; stats2 = sorted_df[f'{stat_en}_s2']
@@ -106,8 +107,9 @@ def generate_stat_comparison_pages(df_s1, df_s2):
 
 def main():
     try:
-        df_s1 = pd.read_csv("espn_team_stats_23-24.csv")
-        df_s2 = pd.read_csv("espn_team_stats_24-25.csv")
+        # ★★★ ファイル名を4桁の年に修正 ★★★
+        df_s1 = pd.read_csv("espn_team_stats_2023-24.csv")
+        df_s2 = pd.read_csv("espn_team_stats_2024-25.csv")
     except FileNotFoundError as e:
         print("エラー: CSVファイルが見つかりません。 {0}".format(e))
         sys.exit(1)
