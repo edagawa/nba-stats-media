@@ -78,46 +78,66 @@ TEAM_NAME_MAP = {
 
 # --- ヘルパー関数 ---
 
-# ★★★ ここから新規追加 ★★★
-def get_rank_string(rank, total_teams=30):
-    """順位から説明的な文字列を返す"""
-    if rank <= 5:
-        return "リーグトップクラスの"
-    elif rank <= 10:
-        return "リーグ上位の"
-    elif rank <= 20:
-        return "リーグ平均的な"
-    elif rank <= 25:
-        return "リーグ下位の"
-    else:
-        return "リーグで課題の残る"
-
+# ★★★ ここからサマリー生成ロジックを修正 ★★★
 def generate_team_summary(s1_stats, s2_stats):
-    """2シーズン分のデータからサマリーテキストを生成する"""
-    summary_parts = []
+    """2シーズン分のデータからポジティブなサマリーテキストを生成する"""
+    
+    # 日本語の指標名とポジティブ/ネガティブな変化の表現
+    STAT_INFO = {
+        'OFF EFF': {'jp': 'オフェンス', 'good_change': '向上', 'bad_change': '低下'},
+        'DEF EFF': {'jp': 'ディフェンス', 'good_change': '改善', 'bad_change': '悪化'},
+        'PACE': {'jp': '試合のペース', 'good_change': '高速化', 'bad_change': '低速化'}
+    }
+    
+    # 2024-25シーズンの各指標のランクを取得
+    ranks = {
+        'OFF EFF': s2_stats['OFF EFF_rank'],
+        'DEF EFF': s2_stats['DEF EFF_rank'],
+        'PACE': s2_stats['PACE_rank']
+    }
+    
+    # ランクが最も良いもの（数値が小さい）をチームの強みとする
+    best_strength_stat = min(ranks, key=ranks.get)
+    best_rank = ranks[best_strength_stat]
+    
+    # ランクが最も悪いもの（数値が大きい）をチームの課題とする
+    biggest_challenge_stat = max(ranks, key=ranks.get)
+    worst_rank = ranks[biggest_challenge_stat]
 
-    # 1. 昨シーズンからの変化
-    off_eff_change = s2_stats['OFF EFF'] - s1_stats['OFF EFF']
-    def_eff_change = s2_stats['DEF EFF'] - s1_stats['DEF EFF']
+    positive_sentence = ""
+    challenge_sentence = ""
 
-    if abs(off_eff_change) > 2.0:
-        summary_parts.append(f"オフェンス効率が前年から{'大幅に改善' if off_eff_change > 0 else '低下'}しました。")
-    if abs(def_eff_change) > 2.0:
-        # DEF EFFは低い方が良いので、変化の向きを反転させる
-        summary_parts.append(f"ディフェンス効率は{'悪化' if def_eff_change > 0 else '改善'}が見られます。")
+    # --- 1. ポジティブな要素から文章を組み立てる ---
+    if best_rank <= 10:
+        strength_desc = "リーグ屈指の" if best_rank <= 5 else "リーグ上位の"
+        positive_sentence = f"今シーズンのチームの最大の強みは、{strength_desc}{STAT_INFO[best_strength_stat]['jp']}です。"
+        
+        # 強みに関する昨シーズンからの変化を追記
+        if best_strength_stat == 'OFF EFF' and s2_stats['OFF EFF'] > s1_stats['OFF EFF']:
+            positive_sentence += " 前年からさらに磨きがかかり、リーグを代表する攻撃力を手に入れました。"
+        elif best_strength_stat == 'DEF EFF' and s2_stats['DEF EFF'] < s1_stats['DEF EFF']: # 低い方が良い
+            positive_sentence += " 鉄壁の守備は前年からさらに堅固なものとなり、相手チームを苦しめています。"
+            
+    else: # 뚜렷한 강점이 없는 경우
+        positive_sentence = "今シーズンは攻守両面でバランスの取れた、安定感のあるパフォーマンスを見せています。"
 
-    if not summary_parts:
-        summary_parts.append("前年から全体的に安定したパフォーマンスを維持しています。")
+    # --- 2. 課題と成長の可能性について文章を組み立てる ---
+    # 強みと課題が同じ指標でない場合に、課題を明確に記述する
+    if worst_rank >= 21 and best_strength_stat != biggest_challenge_stat:
+        challenge_desc = "リーグ下位に苦しむ" if worst_rank >= 26 else "改善が待たれる"
+        challenge_sentence = f"一方で、今後の更なる飛躍のためには、{challenge_desc}{STAT_INFO[biggest_challenge_stat]['jp']}の立て直しが鍵となるでしょう。"
 
-    # 2. 今シーズンの特徴
-    pace_rank_str = get_rank_string(s2_stats['PACE_rank'])
-    off_rank_str = get_rank_string(s2_stats['OFF EFF_rank'])
-    def_rank_str = get_rank_string(s2_stats['DEF EFF_rank'])
+        # 課題に関する昨シーズンからの変化を追記
+        if biggest_challenge_stat == 'DEF EFF' and s2_stats['DEF EFF'] > s1_stats['DEF EFF']: # 高い方が悪い
+            challenge_sentence += " 前年に比べ失点が増加傾向にあり、ここを修正できれば一気に上位進出が見えてきます。"
+        elif biggest_challenge_stat == 'OFF EFF' and s2_stats['OFF EFF'] < s1_stats['OFF EFF']:
+            challenge_sentence += " やや得点力に課題を残しており、攻撃のバリエーションを増やすことが期待されます。"
+    else:
+        # 뚜렷한 약점이 없는 경우
+        challenge_sentence = "この安定感をシーズン通して維持し、さらに一段階レベルアップできれば、素晴らしい結果が期待できます。"
 
-    summary_parts.append(f"2024-25シーズンは、{pace_rank_str}ペースから繰り出される{off_rank_str}オフェンスと、{def_rank_str}ディフェンスを特徴とするチームです。")
-
-    return " ".join(summary_parts)
-# ★★★ ここまで新規追加 ★★★
+    return positive_sentence + " " + challenge_sentence
+# ★★★ ここまでサマリー生成ロジックを修正 ★★★
 
 
 def get_footer_data(team_path_prefix, stat_path_prefix):
@@ -205,7 +225,6 @@ def generate_comparison_pages(df_s1, df_s2, env):
             plt.savefig(f"output/images/comparison_{image_filename}.svg", format="svg")
             plt.close()
 
-            # ★★★ ここから修正 ★★★
             # サマリーテキストを生成
             summary = generate_team_summary(stats1, stats2)
             
@@ -222,7 +241,6 @@ def generate_comparison_pages(df_s1, df_s2, env):
                 'season1_url': f"{image_filename}_2023-24_season.html",
                 'season2_url': f"{image_filename}_2024-25_season.html"
             }
-            # ★★★ ここまで修正 ★★★
 
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
@@ -309,13 +327,11 @@ if __name__ == "__main__":
         df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
         print("NET EFF列の計算が完了しました。")
 
-        # ★★★ ここから修正 ★★★
         # サマリー生成のために、リーグ内順位を計算して列を追加
         df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False)
         df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False)
         df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True) # DEFは低い方が良い
         print("2024-25シーズンのリーグ内ランクを計算しました。")
-        # ★★★ ここまで修正 ★★★
 
     except FileNotFoundError as e:
         print(f"エラー: データファイルが見つかりません。{e}")
