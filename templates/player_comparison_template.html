@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ player_name }} | 選手スタッツ比較</title>
+    {% include '_gtm_head.html' %}
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    {% include '_gtm_body.html' %}
+    <header>
+        <h1>{{ player_name }}</h1>
+        <nav>
+            <a href="../index.html">トップページ</a>
+        </nav>
+    </header>
+    <div class="container">
+        <main>
+            <div class="breadcrumb">
+                <a href="../index.html">トップページ</a> &gt; <span>{{ player_name }}</span>
+            </div>
+            <section class="team-profile">
+                <div class="team-details">
+                    <h3>選手情報 (2024-25)</h3>
+                    <ul>
+                        <li><strong>チーム:</strong> {{ player_info.Team | default('N/A') }}</li>
+                        <li><strong>ポジション:</strong> {{ player_info.POS | default('N/A') }}</li>
+                    </ul>
+                </div>
+            </section>
+            <h2>シーズン比較: 2023-24 vs 2024-25</h2>
+            <section class="comparison-graph">
+                <h3>主要指標の変化</h3>
+                <figure>
+                    <img src="../images/players/comparison_{{ player_filename }}.svg" alt="{{ player_name }} シーズン比較グラフ" onerror="this.style.display='none'">
+                </figure>
+            </section>
+            <div class="seasons-container">
+                <div class="season-card">
+                    <h3>2023-24シーズン</h3>
+                    {{ stats_s1|safe }}
+                </div>
+                <div class="season-card">
+                    <h3>2024-25シーズン</h3>
+                    {{ stats_s2|safe }}
+                </div>
+            </div>
+        </main>
+    </div>
+    {% include 'footer.html' %}
+</body>
+</html>

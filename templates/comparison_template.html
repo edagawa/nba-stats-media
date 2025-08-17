@@ -57,7 +57,20 @@
                     {{ stats_s2|safe }}
                 </div>
             </div>
-        </main>
+            
+            <section class="roster-section">
+                <h2>所属選手 (2024-25)</h2>
+                {% if player_list %}
+                    <ul class="roster-list">
+                    {% for player in player_list %}
+                        <li><a href="{{ player.url }}">{{ player.name }}</a></li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>所属選手のデータがありません。</p>
+                {% endif %}
+            </section>
+            </main>
     </div>
     {% include 'footer.html' %}
 </body>
