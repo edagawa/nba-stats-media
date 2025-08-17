@@ -62,7 +62,6 @@ STATS_TO_GENERATE = {
     'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating'
 }
 
-# ★★★ 修正点1: チーム名の不一致を吸収するための対応表 ★★★
 TEAM_NAME_MAP = {
     "Atlanta": "Atlanta Hawks", "Boston": "Boston Celtics", "Brooklyn": "Brooklyn Nets",
     "Charlotte": "Charlotte Hornets", "Chicago": "Chicago Bulls", "Cleveland": "Cleveland Cavaliers",
@@ -78,6 +77,49 @@ TEAM_NAME_MAP = {
 
 
 # --- ヘルパー関数 ---
+
+# ★★★ ここから新規追加 ★★★
+def get_rank_string(rank, total_teams=30):
+    """順位から説明的な文字列を返す"""
+    if rank <= 5:
+        return "リーグトップクラスの"
+    elif rank <= 10:
+        return "リーグ上位の"
+    elif rank <= 20:
+        return "リーグ平均的な"
+    elif rank <= 25:
+        return "リーグ下位の"
+    else:
+        return "リーグで課題の残る"
+
+def generate_team_summary(s1_stats, s2_stats):
+    """2シーズン分のデータからサマリーテキストを生成する"""
+    summary_parts = []
+
+    # 1. 昨シーズンからの変化
+    off_eff_change = s2_stats['OFF EFF'] - s1_stats['OFF EFF']
+    def_eff_change = s2_stats['DEF EFF'] - s1_stats['DEF EFF']
+
+    if abs(off_eff_change) > 2.0:
+        summary_parts.append(f"オフェンス効率が前年から{'大幅に改善' if off_eff_change > 0 else '低下'}しました。")
+    if abs(def_eff_change) > 2.0:
+        # DEF EFFは低い方が良いので、変化の向きを反転させる
+        summary_parts.append(f"ディフェンス効率は{'悪化' if def_eff_change > 0 else '改善'}が見られます。")
+
+    if not summary_parts:
+        summary_parts.append("前年から全体的に安定したパフォーマンスを維持しています。")
+
+    # 2. 今シーズンの特徴
+    pace_rank_str = get_rank_string(s2_stats['PACE_rank'])
+    off_rank_str = get_rank_string(s2_stats['OFF EFF_rank'])
+    def_rank_str = get_rank_string(s2_stats['DEF EFF_rank'])
+
+    summary_parts.append(f"2024-25シーズンは、{pace_rank_str}ペースから繰り出される{off_rank_str}オフェンスと、{def_rank_str}ディフェンスを特徴とするチームです。")
+
+    return " ".join(summary_parts)
+# ★★★ ここまで新規追加 ★★★
+
+
 def get_footer_data(team_path_prefix, stat_path_prefix):
     """フッター用のナビゲーションデータを、ページの階層に合わせて生成する"""
     stat_pages = [{'name': en_full, 'url': f"{stat_path_prefix}{en_short.replace('%', '_PCT').replace(' ', '_')}.html"} for en_short, en_full in STATS_TO_GENERATE.items()]
@@ -107,7 +149,6 @@ def generate_glossary_page(env):
     """指標解説ページ(glossary.html)を生成する"""
     print("--- 指標解説ページの生成開始 ---")
     template = env.get_template('glossary_template.html')
-    # ★★★ 修正点2: Net Ratingの説明を追加 ★★★
     glossary_items = [
         {'term': 'Pace', 'description': '1試合あたり48分間のポゼッション（攻撃回数）の推定値。'},
         {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'},
@@ -142,15 +183,17 @@ def generate_comparison_pages(df_s1, df_s2, env):
 
     for team in all_teams:
         try:
-            stats1 = df_s1_indexed.loc[team, stats_to_compare]
-            stats2 = df_s2_indexed.loc[team, stats_to_compare]
+            stats1 = df_s1_indexed.loc[team]
+            stats2 = df_s2_indexed.loc[team]
 
             # グラフ生成
+            stats_for_graph1 = stats1[stats_to_compare]
+            stats_for_graph2 = stats2[stats_to_compare]
             x = np.arange(len(stats_to_compare))
             width = 0.35
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(x - width/2, stats1, width, label='2023-24')
-            ax.bar(x + width/2, stats2, width, label='2024-25')
+            ax.bar(x - width/2, stats_for_graph1, width, label='2023-24')
+            ax.bar(x + width/2, stats_for_graph2, width, label='2024-25')
             ax.set_ylabel('Value')
             ax.set_title(f'Key Stats Comparison: {team}')
             ax.set_xticks(x)
@@ -161,19 +204,26 @@ def generate_comparison_pages(df_s1, df_s2, env):
             image_filename = team.replace(' ', '_')
             plt.savefig(f"output/images/comparison_{image_filename}.svg", format="svg")
             plt.close()
+
+            # ★★★ ここから修正 ★★★
+            # サマリーテキストを生成
+            summary = generate_team_summary(stats1, stats2)
             
             # HTML生成
             render_data = { 
                 'team_name': team,
                 'image_filename': image_filename, 
-                'stats_s1': df_s1_indexed.loc[team].to_frame(name='Value').to_html(), 
-                'stats_s2': df_s2_indexed.loc[team].to_frame(name='Value').to_html(),
+                'stats_s1': stats1.to_frame(name='Value').to_html(), 
+                'stats_s2': stats2.to_frame(name='Value').to_html(),
                 'details': TEAM_DETAILS.get(team, {}),
                 'all_teams_structured': all_teams_structured, 
                 'stat_pages': stat_pages,
+                'summary_text': summary, # 生成したサマリーを渡す
                 'season1_url': f"{image_filename}_2023-24_season.html",
                 'season2_url': f"{image_filename}_2024-25_season.html"
             }
+            # ★★★ ここまで修正 ★★★
+
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(template.render(render_data))
@@ -250,16 +300,22 @@ if __name__ == "__main__":
         df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
         print("CSVファイルの読み込みに成功しました。")
 
-        # ★★★ 修正点1: CSV内のチーム名を正式名称に統一する ★★★
         df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP)
         df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
         print("チーム名を正式名称に統一しました。")
 
 
-        # NET EFF（得失点差）の列を計算して追加する
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']
         df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
         print("NET EFF列の計算が完了しました。")
+
+        # ★★★ ここから修正 ★★★
+        # サマリー生成のために、リーグ内順位を計算して列を追加
+        df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False)
+        df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False)
+        df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True) # DEFは低い方が良い
+        print("2024-25シーズンのリーグ内ランクを計算しました。")
+        # ★★★ ここまで修正 ★★★
 
     except FileNotFoundError as e:
         print(f"エラー: データファイルが見つかりません。{e}")

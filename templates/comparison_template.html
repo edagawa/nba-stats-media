@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ team_name }} | シーズン比較</title>
     <style>
+        /* ... CSSスタイルは変更なし ... */
         :root {
             --primary-color: #003366;
             --secondary-color: #f4f7fa;
@@ -221,7 +222,7 @@
     <div class="container">
         <main>
             <p class="breadcrumb"><a href="../index.html">チーム一覧に戻る</a></p>
-
+            
             <section class="team-profile">
                 <div class="profile-header">
                     <img src="../logos/{{ image_filename }}.svg" alt="{{ team_name }} Logo" class="team-logo" onerror="this.style.display='none'">
@@ -242,7 +243,7 @@
             <h2>シーズン比較: 2023-24 vs 2024-25</h2>
             
             <div class="highlight">
-                <p><strong>サマリー:</strong> ここに、2シーズン間のパフォーマンスにおける最も顕著な変化や重要なポイントを記述します。（例：オフェンス効率は大幅に向上しましたが、ディフェンスリバウンドに課題が見られます。）</p>
+                <p>{{ summary_text }}</p>
             </div>
 
             <section class="comparison-graph">
