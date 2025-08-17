@@ -1,5 +1,5 @@
 import os
-import sys  # スクリプトを終了するためにインポート
+import sys
 import pandas as pd
 import jinja2
 import matplotlib.pyplot as plt
@@ -7,50 +7,13 @@ from nba_api.stats.static import teams
 from nba_api.stats.endpoints import leaguedashteamstats, boxscoretraditionalv2, playbyplayv2
 from datetime import datetime, timedelta
 
-# (generate_report_html などの関数は変更なしのため省略)
-# ...
-# ...
-
-def get_team_season_stats_summary():
-    """
-    全チームのシーズンサマリーデータを取得する
-    """
-    try:
-        team_stats = leaguedashteamstats.LeagueDashTeamStats(season="2023-24").get_data_frames()[0]
-        # データが空かどうかの追加チェック
-        if team_stats.empty:
-            print("APIからデータが返されましたが、中身が空です。")
-            return pd.DataFrame()
-        return team_stats
-    except Exception as e:
-        print(f"リーグデータ取得中にエラーが発生しました: {e}")
-        return pd.DataFrame()
-
-# (generate_season_summary_text などの関数は変更なしのため省略)
-# ...
-# ...
-
-def main():
-    team_stats_df = get_team_season_stats_summary()
-    if team_stats_df.empty:
-        print("データが取得できませんでした。スクリプトを異常終了します。")
-        # ★★★★★ ここを変更 ★★★★★
-        # ワークフローに「失敗」を伝えるために、exit code 1 で終了する
-        sys.exit(1)
-    
-    print("データ取得成功。HTMLファイルの生成を開始します。")
-    generate_index_page(team_stats_df)
-    generate_team_pages(team_stats_df)
-    print("HTMLファイルの生成が完了しました。")
-    
-if __name__ == "__main__":
-    main()
-
-# --- 以下、省略した関数を記載 ---
-
 def get_game_data(game_date_str):
+    """
+    指定された日付の試合IDを取得する
+    """
     try:
-        games = boxscoretraditionalv2.BoxScoreTraditionalV2(game_id=None).get_data_frames()[0]
+        # ★★★★★ タイムアウトを60秒に延長 ★★★★★
+        games = boxscoretraditionalv2.BoxScoreTraditionalV2(game_id=None, timeout=60).get_data_frames()[0]
         game_ids = games[games['GAME_DATE'] == game_date_str]['GAME_ID'].tolist()
         return game_ids
     except Exception as e:
@@ -58,11 +21,18 @@ def get_game_data(game_date_str):
         return []
 
 def get_game_data_details(game_id):
-    boxscore = boxscoretraditionalv2.BoxScoreTraditionalV2(game_id=game_id).get_data_frames()[0]
-    play_by_play = playbyplayv2.PlayByPlayV2(game_id=game_id).get_data_frames()[0]
+    """
+    試合IDからボックススコアとプレイ・バイ・プレイデータを取得する
+    """
+    # ★★★★★ タイムアウトを60秒に延長 ★★★★★
+    boxscore = boxscoretraditionalv2.BoxScoreTraditionalV2(game_id=game_id, timeout=60).get_data_frames()[0]
+    play_by_play = playbyplayv2.PlayByPlayV2(game_id=game_id, timeout=60).get_data_frames()[0]
     return boxscore, play_by_play
 
 def create_svg_graph(df, filename, title):
+    """
+    スコア推移のSVGグラフを作成する
+    """
     plt.figure(figsize=(12, 6))
     df = df[df['SCORE'].notna()]
     df['SCORE_DIFF'] = df['SCORE'].apply(lambda x: int(x.split(' - ')[0]) - int(x.split(' - ')[1]))
@@ -78,6 +48,9 @@ def create_svg_graph(df, filename, title):
     plt.close()
 
 def generate_highlight_text(boxscore):
+    """
+    ボックススコアから日本語のハイライトテキストを生成する
+    """
     if boxscore.empty:
         return "データがありません。"
     top_scorers = boxscore.nlargest(3, 'PTS')
@@ -87,6 +60,9 @@ def generate_highlight_text(boxscore):
     return highlight_text
 
 def generate_report_html(game_id, boxscore_df, play_by_play_df):
+    """
+    試合レポートのHTMLファイルを生成する
+    """
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template('report_template.html')
@@ -104,7 +80,25 @@ def generate_report_html(game_id, boxscore_df, play_by_play_df):
     with open(f"{output_dir}/{game_id}.html", "w", encoding="utf-8") as f:
         f.write(html_content)
 
+def get_team_season_stats_summary():
+    """
+    全チームのシーズンサマリーデータを取得する
+    """
+    try:
+        # ★★★★★ タイムアウトを60秒に延長 ★★★★★
+        team_stats = leaguedashteamstats.LeagueDashTeamStats(season="2023-24", timeout=60).get_data_frames()[0]
+        if team_stats.empty:
+            print("APIからデータが返されましたが、中身が空です。")
+            return pd.DataFrame()
+        return team_stats
+    except Exception as e:
+        print(f"リーグデータ取得中にエラーが発生しました: {e}")
+        return pd.DataFrame()
+
 def generate_season_summary_text(team_id, team_stats_df):
+    """
+    データに基づいて、自然言語でのシーズン総括コメントを生成
+    """
     team_data = team_stats_df[team_stats_df['TEAM_ID'] == team_id].iloc[0]
     wins = team_data['W_PCT'] * 100
     pts = team_data['PTS']
@@ -114,6 +108,9 @@ def generate_season_summary_text(team_id, team_stats_df):
     return summary
 
 def generate_team_pages(team_stats_df):
+    """
+    全チーム分の総括ページを生成
+    """
     nba_teams = teams.get_teams()
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
@@ -137,6 +134,9 @@ def generate_team_pages(team_stats_df):
         print(f"'{file_name}' を生成しました。")
 
 def generate_index_page(team_stats_df):
+    """
+    トップページを生成
+    """
     nba_teams = teams.get_teams()
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
@@ -154,3 +154,20 @@ def generate_index_page(team_stats_df):
     with open(os.path.join(output_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_content)
     print("index.html を生成しました。")
+
+def main():
+    """
+    メイン処理
+    """
+    team_stats_df = get_team_season_stats_summary()
+    if team_stats_df.empty:
+        print("データが取得できませんでした。スクリプトを異常終了します。")
+        sys.exit(1)
+    
+    print("データ取得成功。HTMLファイルの生成を開始します。")
+    generate_index_page(team_stats_df)
+    generate_team_pages(team_stats_df)
+    print("HTMLファイルの生成が完了しました。")
+    
+if __name__ == "__main__":
+    main()
