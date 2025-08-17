@@ -50,6 +50,23 @@
         .breadcrumb a { color: var(--link-color); text-decoration: none; }
         .breadcrumb a:hover { text-decoration: underline; }
         
+        /* ★★★ Team Profile Section (追加) ★★★ */
+        .team-profile {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .profile-header { text-align: center; flex-shrink: 0; }
+        .team-logo { width: 120px; height: 120px; margin-bottom: 10px; }
+        .team-details { flex-grow: 1; }
+        .team-details ul { list-style-type: none; padding: 0; margin: 0; }
+        .team-details li { padding: 5px 0; font-size: 1.1em; }
+        .team-details li strong { min-width: 100px; display: inline-block; }
+
         /* Highlight Section */
         .highlight {
             background-color: #eaf6ff;
@@ -120,7 +137,7 @@
             padding-top: 8px;
         }
 
-        /* Footer */
+        /* ★★★ Footer Styles (分離したので元ファイルからは削除) ★★★ */
         footer {
             background-color: var(--footer-bg);
             color: #f8f9fa;
@@ -187,7 +204,8 @@
                 flex-direction: column;
                 gap: 20px;
             }
-            .season-card { width: auto; } /* Let it stretch */
+            .season-card { width: auto; }
+            .team-profile { flex-direction: column; }
         }
     </style>
 </head>
@@ -203,6 +221,24 @@
     <div class="container">
         <main>
             <p class="breadcrumb"><a href="../index.html">チーム一覧に戻る</a></p>
+
+            <section class="team-profile">
+                <div class="profile-header">
+                    <img src="../logos/{{ image_filename }}.svg" alt="{{ team_name }} Logo" class="team-logo" onerror="this.style.display='none'">
+                    <h2>{{ team_name }}</h2>
+                </div>
+                <div class="team-details">
+                    <h3>チーム情報</h3>
+                    <ul>
+                        <li><strong>アリーナ:</strong> {{ details.arena | default('N/A', true) }}</li>
+                        <li><strong>所在地:</strong> {{ details.location | default('N/A', true) }}</li>
+                        <li><strong>カンファレンス:</strong> {{ details.conference | default('N/A', true) }}</li>
+                        <li><strong>ディビジョン:</strong> {{ details.division | default('N/A', true) }}</li>
+                        <li><strong>優勝回数:</strong> {{ details.championships | default('N/A', true) }}</li>
+                    </ul>
+                </div>
+            </section>
+
             <h2>シーズン比較: 2023-24 vs 2024-25</h2>
             
             <div class="highlight">
@@ -232,42 +268,7 @@
         </main>
     </div>
 
-    <footer>
-        <div class="footer-container">
-            <h2>他の情報を見る</h2>
-            <div class="footer-nav-section" id="team-links">
-                <h3>チーム別比較</h3>
-                {% for conf, divisions in all_teams_structured.items() %}
-                    <h4>{{ conf }}</h4>
-                    {% for div, teams in divisions.items() %}
-                        <div class="division-group">
-                            <h5>{{ div }}</h5>
-                            <ul>
-                                {% for team in teams %}
-                                <li><a href="{{ team.url }}">{{ team.name }}</a></li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    {% endfor %}
-                {% endfor %}
-            </div>
-
-            <div class="footer-nav-section" id="stat-links">
-                <h3>指標別ランキング</h3>
-                <ul>
-                    {% for stat in stat_pages %}
-                    <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
-                    {% endfor %}
-                </ul>
-                <div class="glossary-link">
-                    <a href="../glossary.html">指標の解説 (Glossary) はこちら</a>
-                </div>
-            </div>
-        </div>
-        <div class="copyright">
-            <p>&copy; 2025 nba-stats-media. All Rights Reserved.</p>
-        </div>
-    </footer>
+    {% include 'footer.html' %}
 
 </body>
 </html>
