@@ -77,8 +77,6 @@ TEAM_NAME_MAP = {
 
 
 # --- ヘルパー関数 ---
-
-# ★★★ ここからサマリー生成ロジックを修正 ★★★
 def generate_team_summary(s1_stats, s2_stats):
     """2シーズン分のデータからポジティブなサマリーテキストを生成する"""
     
@@ -110,7 +108,7 @@ def generate_team_summary(s1_stats, s2_stats):
     # --- 1. ポジティブな要素から文章を組み立てる ---
     if best_rank <= 10:
         strength_desc = "リーグ屈指の" if best_rank <= 5 else "リーグ上位の"
-        positive_sentence = f"今シーズンのチームの最大の強みは、{strength_desc}{STAT_INFO[best_strength_stat]['jp']}です。"
+        positive_sentence = f"今シーズンのチームの最大の武器は、{strength_desc}{STAT_INFO[best_strength_stat]['jp']}です。"
         
         # 強みに関する昨シーズンからの変化を追記
         if best_strength_stat == 'OFF EFF' and s2_stats['OFF EFF'] > s1_stats['OFF EFF']:
@@ -137,7 +135,6 @@ def generate_team_summary(s1_stats, s2_stats):
         challenge_sentence = "この安定感をシーズン通して維持し、さらに一段階レベルアップできれば、素晴らしい結果が期待できます。"
 
     return positive_sentence + " " + challenge_sentence
-# ★★★ ここまでサマリー生成ロジックを修正 ★★★
 
 
 def get_footer_data(team_path_prefix, stat_path_prefix):
@@ -229,6 +226,7 @@ def generate_comparison_pages(df_s1, df_s2, env):
             summary = generate_team_summary(stats1, stats2)
             
             # HTML生成
+            # ★★★ ここから修正 ★★★
             render_data = { 
                 'team_name': team,
                 'image_filename': image_filename, 
@@ -237,10 +235,9 @@ def generate_comparison_pages(df_s1, df_s2, env):
                 'details': TEAM_DETAILS.get(team, {}),
                 'all_teams_structured': all_teams_structured, 
                 'stat_pages': stat_pages,
-                'summary_text': summary, # 生成したサマリーを渡す
-                'season1_url': f"{image_filename}_2023-24_season.html",
-                'season2_url': f"{image_filename}_2024-25_season.html"
+                'summary_text': summary,
             }
+            # ★★★ ここまで修正 ★★★
 
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
