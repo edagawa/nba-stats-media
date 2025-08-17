@@ -59,7 +59,7 @@ TEAM_DETAILS = {
 STATS_TO_GENERATE = {
     'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio',
     'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %',
-    'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency'
+    'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating'
 }
 
 # --- ヘルパー関数 ---
@@ -70,7 +70,6 @@ def get_footer_data(team_path_prefix, stat_path_prefix):
     for conf, divisions in CONFERENCE_STRUCTURE.items():
         all_teams_structured[conf] = {}
         for div, teams_in_div in divisions.items():
-            # ★★★ ここで生成されるURLがファイル名と一致することが重要 ★★★
             all_teams_structured[conf][div] = [{'name': team, 'url': f"{team_path_prefix}comparison_{team.replace(' ', '_')}.html"} for team in teams_in_div]
     return stat_pages, all_teams_structured
 
@@ -97,6 +96,7 @@ def generate_glossary_page(env):
         {'term': 'Pace', 'description': '1試合あたり48分間のポゼッション（攻撃回数）の推定値。'},
         {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'},
         {'term': 'Defensive Efficiency (DEF EFF)', 'description': '100ポゼッションあたりの失点。'},
+        {'term': 'Net Rating (NET EFF)', 'description': 'Offensive EfficiencyとDefensive Efficiencyの差。100ポゼッションあたりの得失点差を示す。'},
         {'term': 'True Shooting % (TS%)', 'description': 'フィールドゴール、3ポイント、フリースローを総合的に評価したシュート効率。'},
         {'term': 'Assist Ratio (AST)', 'description': 'チームのフィールドゴール成功のうち、アシストが占める割合。'},
         {'term': 'Turnover Ratio (TO)', 'description': '100ポゼッションあたりのターンオーバー数。'},
@@ -121,7 +121,7 @@ def generate_comparison_pages(df_s1, df_s2, env):
     all_teams = sorted(list(df_s1_indexed.index.union(df_s2_indexed.index)))
     template = env.get_template('comparison_template.html')
     
-    stats_to_compare = ['PACE', 'OFF EFF', 'DEF EFF', 'TS%', 'AST', 'TO']
+    stats_to_compare = ['PACE', 'OFF EFF', 'DEF EFF', 'NET EFF', 'TS%', 'AST', 'TO']
     stat_pages, all_teams_structured = get_footer_data('./', '../stats/')
 
     for team in all_teams:
@@ -142,7 +142,6 @@ def generate_comparison_pages(df_s1, df_s2, env):
             ax.legend()
             fig.tight_layout()
             
-            # ★★★ ここで生成されるファイル名がリンクURLと一致することが重要 ★★★
             image_filename = team.replace(' ', '_')
             plt.savefig(f"output/images/comparison_{image_filename}.svg", format="svg")
             plt.close()
@@ -162,10 +161,8 @@ def generate_comparison_pages(df_s1, df_s2, env):
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(template.render(render_data))
-        except KeyError:
-            print(f"警告: '{team}' のデータが片方のシーズンにしか存在しないため、比較ページは生成されません。")
         except Exception as e:
-            print(f"エラー: {team} のページ生成中に問題が発生しました: {e}")
+            print(f"警告: {team} の比較ページ生成中にエラーが発生しました。詳細: {e}")
     print("--- チーム別比較ページの生成完了 ---")
 
 def generate_stat_pages(df_s1, df_s2, env):
@@ -175,13 +172,15 @@ def generate_stat_pages(df_s1, df_s2, env):
 
     for stat_short, stat_full in STATS_TO_GENERATE.items():
         try:
+            sort_ascending = True if stat_short == 'DEF EFF' else False
+
             # データ準備
             df_merged = pd.merge(
                 df_s1[['Team', stat_short]],
                 df_s2[['Team', stat_short]],
                 on='Team',
                 suffixes=('_s1', '_s2')
-            ).set_index('Team').sort_values(by=f"{stat_short}_s2", ascending=False)
+            ).set_index('Team').sort_values(by=f"{stat_short}_s2", ascending=sort_ascending)
             
             # グラフ生成
             y = np.arange(len(df_merged.index))
@@ -208,6 +207,8 @@ def generate_stat_pages(df_s1, df_s2, env):
                 'stat_name_en': stat_filename,
                 'data_table_html': df_merged.rename(columns={f'{stat_short}_s1': '2023-24', f'{stat_short}_s2': '2024-25'}).to_html(),
                 'stat_pages': stat_pages,
+                # ★★★ 修正点 ★★★
+                # 'all_team_structured' -> 'all_teams_structured' にタイポを修正
                 'all_teams_structured': all_teams_structured
             }
             output_path = f"output/stats/{stat_filename}.html"
@@ -234,10 +235,21 @@ if __name__ == "__main__":
         df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv")
         df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
         print("CSVファイルの読み込みに成功しました。")
+
+        # NET EFF（得失点差）の列を計算して追加する
+        df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']
+        df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
+        print("NET EFF列の計算が完了しました。")
+
     except FileNotFoundError as e:
         print(f"エラー: データファイルが見つかりません。{e}")
         print("get_data.py と get_data_24-25.py を実行して、CSVファイルを先に生成してください。")
         sys.exit(1) # エラーが見つかったのでスクリプトを終了
+    except KeyError as e:
+        print(f"エラー: CSVファイルに必要な列（OFF EFFまたはDEF EFF）が存在しません。{e}")
+        print("CSVファイルの内容を確認してください。")
+        sys.exit(1)
+
 
     # --- 3. Jinja2テンプレートエンジン初期化 ---
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
