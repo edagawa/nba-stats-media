@@ -12,12 +12,10 @@
         a:hover { background-color: #005a9c; }
         .section { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px;}
         .division-group { width: 100%; margin-bottom: 20px; }
-        /* フッター用のスタイルをトップページにも適用 */
-        footer { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
-        footer ul { list-style-type: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
-        footer li { margin: 5px; }
-        footer a { text-decoration: none; color: white; background-color: #6c757d; padding: 8px 15px; border-radius: 5px; font-size: 0.9em; }
-        footer a:hover { background-color: #5a6268; }
+        /* ★★★ 用語集リンク用のスタイルを追加 ★★★ */
+        .glossary-link { text-align: center; margin-top: 15px; }
+        .glossary-link a { background-color: #28a745; }
+        .glossary-link a:hover { background-color: #218838; }
     </style>
 </head>
 <body>
@@ -37,6 +35,7 @@
             </div>
         {% endfor %}
     {% endfor %}
+
     <div class="section">
         <h2>指標別ランキング</h2>
         <p style="text-align: center;">指標別に全チームのシーズン比較を確認できます。</p>
@@ -45,6 +44,9 @@
             <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
             {% endfor %}
         </ul>
+        <div class="glossary-link">
+            <a href="./glossary.html">指標の解説はこちら</a>
+        </div>
     </div>
 </body>
 </html>

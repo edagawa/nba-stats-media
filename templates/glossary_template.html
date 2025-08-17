@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>指標の解説 (Glossary) | NBA Stats</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
+        h1 { color: #003366; text-align: center; }
+        .glossary-item { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        .term { font-weight: bold; font-size: 1.2em; color: #003366; }
+        .description { margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <p><a href="./index.html">トップページに戻る</a></p>
+    <h1>指標の解説 (Glossary)</h1>
+
+    {% for item in glossary_items %}
+    <div class="glossary-item">
+        <div class="term">{{ item.term }}</div>
+        <div class="description">{{ item.description }}</div>
+    </div>
+    {% endfor %}
+
+</body>
+</html>
