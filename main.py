@@ -76,18 +76,23 @@ def generate_comparison_pages(df_s1, df_s2):
             image_filename = team.replace(' ', '_')
             plt.savefig(os.path.join(output_dir_images, "comparison_{0}.svg".format(image_filename)), format="svg"); plt.close()
             
-            # ★★★ テンプレートにチーム詳細情報を渡す ★★★
             render_data = { 
                 'team_name': team, 'image_filename': image_filename, 
                 'stats_s1': df_s1.loc[team].to_frame().to_html(), 
                 'stats_s2': df_s2.loc[team].to_frame().to_html(),
-                'details': TEAM_DETAILS.get(team, {}), # 見つからない場合は空の辞書を渡す
+                'details': TEAM_DETAILS.get(team, {}),
                 'all_teams_structured': all_teams_structured_footer, 
-                'stat_pages': stat_pages_info_footer 
+                'stat_pages': stat_pages_info_footer,
+                
+                # ### ここから2行が追加された部分 ###
+                'season1_url': f"{image_filename}_2023-24_season.html",
+                'season2_url': f"{image_filename}_2024-25_season.html" # 最新シーズンの詳細ページへのリンク（別途生成されている想定）
             }
             html_content = comparison_template.render(render_data)
-            with open(os.path.join(output_dir_teams, "{0}.html".format(image_filename)), "w", encoding="utf-8") as f: f.write(html_content)
+            # ★★★注意：比較ページのファイル名を `comparison_` プレフィックス付きに変更します ★★★
+            output_path = os.path.join(output_dir_teams, "comparison_{0}.html".format(image_filename))
+            with open(output_path, "w", encoding="utf-8") as f: f.write(html_content)
         except KeyError: print("'{0}' のデータが片方のシーズンにしか存在しないため、比較ページは生成されません。".format(team))
     print("--- チーム別比較ページの生成完了 ---")
 
-# ... (他の関数は変更なし) ...
+# ... (他の関数やメインの実行部分は変更なし) ...
