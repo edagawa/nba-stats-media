@@ -6,46 +6,74 @@
     <style>
         body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
         h1, h2, h3, h4 { text-align: center; color: #003366; }
-        ul { list-style-type: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
-        li { margin: 10px; }
-        a { text-decoration: none; color: white; background-color: #0077c2; padding: 10px 20px; border-radius: 5px; }
-        a:hover { background-color: #005a9c; }
-        .section { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px;}
-        .division-group { width: 100%; margin-bottom: 20px; }
-        .glossary-link { text-align: center; margin-top: 15px; }
-        .glossary-link a { background-color: #28a745; }
+        p { text-align: center; }
+        
+        /* ★★★ フッターのスタイルは外部CSSや共通のstyleブロックにまとめるのが望ましい ★★★ */
+        footer {
+            background-color: #343a40;
+            color: #f8f9fa;
+            padding: 40px 20px;
+            margin-top: 40px;
+        }
+        .footer-container {
+            max-width: 1100px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        footer h2, footer h3, footer h4, footer h5 { color: white; text-align: left; }
+        footer h2 { margin-bottom: 20px; grid-column: 1 / -1; text-align: center; }
+        .footer-nav-section ul {
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .footer-nav-section li a {
+            text-decoration: none;
+            color: white;
+            background-color: #6c757d;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            display: block;
+            transition: background-color 0.3s;
+        }
+        .footer-nav-section li a:hover { background-color: #5a6268; }
+
+        .division-group { margin-bottom: 15px; }
+        .division-group h5 { font-size: 1.1em; margin-bottom: 10px; border-bottom: 1px solid #6c757d; padding-bottom: 5px; }
+        .division-group ul { gap: 8px; }
+
+        .glossary-link { text-align: center; margin-top: 20px; }
+        .glossary-link a {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+        }
         .glossary-link a:hover { background-color: #218838; }
+
+        .copyright {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #6c757d;
+            font-size: 0.9em;
+            color: #adb5bd;
+        }
     </style>
 </head>
 <body>
     <h1>NBA {{ season_string }}</h1>
     
-    <p style="text-align: center;">見たいチームの比較ページへ移動します。</p>
-    {% for conf, divisions in all_teams_structured.items() %}
-        <h3>{{ conf }}</h3>
-        {% for div, teams in divisions.items() %}
-            <div class="division-group">
-                <h4>{{ div }}</h4>
-                <ul>
-                    {% for team in teams %}
-                    <li><a href="{{ team.url }}">{{ team.name }}</a></li>
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endfor %}
-    {% endfor %}
+    <p>見たいチームの比較ページや、指標別のランキングページへ移動できます。</p>
+    
+    {% include 'footer.html' %}
 
-    <div class="section">
-        <h2>指標別ランキング</h2>
-        <p style="text-align: center;">指標別に全チームのシーズン比較を確認できます。</p>
-        <ul>
-            {% for stat in stat_pages %}
-            <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
-            {% endfor %}
-        </ul>
-        <div class="glossary-link">
-            <a href="./glossary.html">指標の解説 (Glossary) はこちら</a>
-        </div>
-    </div>
 </body>
 </html>

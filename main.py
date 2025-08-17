@@ -8,13 +8,11 @@ import numpy as np
 
 plt.rcParams['font.family'] = 'sans-serif'
 
-# (CONFERENCE_STRUCTUREは変更なし)
 CONFERENCE_STRUCTURE = {
     "Western Conference": { "Northwest Division": ["Denver Nuggets", "Minnesota Timberwolves", "Oklahoma City Thunder", "Portland Trail Blazers", "Utah Jazz"], "Pacific Division": ["Golden State Warriors", "LA Clippers", "Los Angeles Lakers", "Phoenix Suns", "Sacramento Kings"], "Southwest Division": ["Dallas Mavericks", "Houston Rockets", "Memphis Grizzlies", "New Orleans Pelicans", "San Antonio Spurs"] },
     "Eastern Conference": { "Atlantic Division": ["Boston Celtics", "Brooklyn Nets", "New York Knicks", "Philadelphia 76ers", "Toronto Raptors"], "Central Division": ["Chicago Bulls", "Cleveland Cavaliers", "Detroit Pistons", "Indiana Pacers", "Milwaukee Bucks"], "Southeast Division": ["Atlanta Hawks", "Charlotte Hornets", "Miami Heat", "Orlando Magic", "Washington Wizards"] }
 }
 
-# ★★★ チーム詳細データを定義 ★★★
 TEAM_DETAILS = {
     "Atlanta Hawks": {"conference": "Eastern", "division": "Southeast", "arena": "State Farm Arena", "location": "Atlanta, Georgia", "championships": "1 (1958)"},
     "Boston Celtics": {"conference": "Eastern", "division": "Atlantic", "arena": "TD Garden", "location": "Boston, Massachusetts", "championships": "18 (Most recent: 2024)"},
@@ -47,26 +45,69 @@ TEAM_DETAILS = {
     "Utah Jazz": {"conference": "Western", "division": "Northwest", "arena": "Delta Center", "location": "Salt Lake City, Utah", "championships": "0"},
     "Washington Wizards": {"conference": "Eastern", "division": "Southeast", "arena": "Capital One Arena", "location": "Washington, D.C.", "championships": "1 (1978 as Washington Bullets)"},
 }
+STATS_TO_GENERATE = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
 
-# (generate_season_pages, generate_main_index, etc. は変更なし)
+def get_footer_data(team_path_prefix, stat_path_prefix):
+    """フッター用のナビゲーションデータを生成する"""
+    stat_pages = [{'name': en_full, 'url': f"{stat_path_prefix}{en_short.replace('%', '_PCT').replace(' ', '_')}.html"} for en_short, en_full in STATS_TO_GENERATE.items()]
+    all_teams_structured = {}
+    for conf, divisions in CONFERENCE_STRUCTURE.items():
+        all_teams_structured[conf] = {}
+        for div, teams_in_div in divisions.items():
+            all_teams_structured[conf][div] = [{'name': team, 'url': f"{team_path_prefix}comparison_{team.replace(' ', '_')}.html"} for team in teams_in_div]
+    return stat_pages, all_teams_structured
 
-def generate_comparison_pages(df_s1, df_s2):
+def generate_main_index(env):
+    """トップページ(index.html)を生成する"""
+    print("--- トップページの生成開始 ---")
+    template = env.get_template('index_template.html')
+    stat_pages, all_teams_structured = get_footer_data('./teams/', './stats/')
+    render_data = {
+        'season_string': '2024-25 & 2023-24 シーズン比較',
+        'stat_pages': stat_pages,
+        'all_teams_structured': all_teams_structured
+    }
+    html_content = template.render(render_data)
+    with open("output/index.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print("--- トップページの生成完了 ---")
+
+def generate_glossary_page(env):
+    """指標解説ページ(glossary.html)を生成する"""
+    print("--- 指標解説ページの生成開始 ---")
+    template = env.get_template('glossary_template.html')
+    # ここに指標の解説を記述
+    glossary_items = [
+        {'term': 'Pace', 'description': '1試合あたりの48分間のポゼッション（攻撃回数）の推定値。'},
+        {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'},
+        {'term': 'Defensive Efficiency (DEF EFF)', 'description': '100ポゼッションあたりの失点。'},
+        {'term': 'Net Rating (NET EFF)', 'description': 'Offensive EfficiencyとDefensive Efficiencyの差。100ポゼッションあたりの得失点差を示す。'},
+        {'term': 'True Shooting % (TS%)', 'description': 'フィールドゴール、3ポイント、フリースローを総合的に評価したシュート効率。'},
+        {'term': 'Assist Ratio (AST)', 'description': 'チームのフィールドゴール成功のうち、アシストが占める割合。'},
+        {'term': 'Turnover Ratio (TO)', 'description': '100ポゼッションあたりのターンオーバー数。'},
+    ]
+    stat_pages, all_teams_structured = get_footer_data('./teams/', './stats/')
+    render_data = {
+        'glossary_items': glossary_items,
+        'stat_pages': stat_pages,
+        'all_teams_structured': all_teams_structured
+    }
+    html_content = template.render(render_data)
+    with open("output/glossary.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print("--- 指標解説ページの生成完了 ---")
+
+def generate_comparison_pages(df_s1, df_s2, env):
     print("--- チーム別比較ページの生成開始 ---")
     df_s1 = df_s1.set_index('Team'); df_s2 = df_s2.set_index('Team')
     all_teams = sorted(list(df_s1.index.union(df_s2.index)))
-    template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'); env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     comparison_template = env.get_template('comparison_template.html')
-    output_dir_teams = "output/teams"; output_dir_images = "output/images"
-    os.makedirs(output_dir_teams, exist_ok=True); os.makedirs(output_dir_images, exist_ok=True)
-    stats_to_compare = ['PACE', 'OFF EFF', 'DEF EFF', 'NET EFF', 'TS%', 'AST', 'TO']
-    stats_to_generate = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
-    stat_pages_info_footer = [{'name': en_full, 'url': '../stats/{0}.html'.format(en_short.replace('%', '_PCT').replace(' ', '_'))} for en_short, en_full in stats_to_generate.items()]
-    all_teams_structured_footer = {}
-    for conf, divisions in CONFERENCE_STRUCTURE.items():
-        all_teams_structured_footer[conf] = {};
-        for div, teams_in_div in divisions.items():
-            all_teams_structured_footer[conf][div] = [{'name': team, 'url': './{0}.html'.format(team.replace(' ', '_'))} for team in teams_in_div]
-            
+    output_dir_teams = "output/teams"; output_dir_images = "output/images"; output_dir_logos = "output/logos"
+    os.makedirs(output_dir_teams, exist_ok=True); os.makedirs(output_dir_images, exist_ok=True); os.makedirs(output_dir_logos, exist_ok=True)
+    stats_to_compare = ['PACE', 'OFF EFF', 'DEF EFF', 'TS%', 'AST', 'TO']
+    
+    stat_pages, all_teams_structured = get_footer_data('./', '../stats/')
+
     for team in all_teams:
         try:
             stats1 = df_s1.loc[team, stats_to_compare]; stats2 = df_s2.loc[team, stats_to_compare]
@@ -81,18 +122,16 @@ def generate_comparison_pages(df_s1, df_s2):
                 'stats_s1': df_s1.loc[team].to_frame().to_html(), 
                 'stats_s2': df_s2.loc[team].to_frame().to_html(),
                 'details': TEAM_DETAILS.get(team, {}),
-                'all_teams_structured': all_teams_structured_footer, 
-                'stat_pages': stat_pages_info_footer,
-                
-                # ### ここから2行が追加された部分 ###
+                'all_teams_structured': all_teams_structured, 
+                'stat_pages': stat_pages,
                 'season1_url': f"{image_filename}_2023-24_season.html",
-                'season2_url': f"{image_filename}_2024-25_season.html" # 最新シーズンの詳細ページへのリンク（別途生成されている想定）
+                'season2_url': f"{image_filename}_2024-25_season.html"
             }
             html_content = comparison_template.render(render_data)
-            # ★★★注意：比較ページのファイル名を `comparison_` プレフィックス付きに変更します ★★★
             output_path = os.path.join(output_dir_teams, "comparison_{0}.html".format(image_filename))
             with open(output_path, "w", encoding="utf-8") as f: f.write(html_content)
         except KeyError: print("'{0}' のデータが片方のシーズンにしか存在しないため、比較ページは生成されません。".format(team))
     print("--- チーム別比較ページの生成完了 ---")
 
-# ... (他の関数やメインの実行部分は変更なし) ...
+# (この他の関数やメインの実行部分は、適宜フッターデータを渡すように修正してください)
+# ...

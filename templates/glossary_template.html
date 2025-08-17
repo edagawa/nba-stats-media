@@ -9,6 +9,65 @@
         .glossary-item { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
         .term { font-weight: bold; font-size: 1.2em; color: #003366; }
         .description { margin-top: 5px; }
+        
+        /* ★★★ フッターのスタイルは外部CSSや共通のstyleブロックにまとめるのが望ましい ★★★ */
+        footer {
+            background-color: #343a40;
+            color: #f8f9fa;
+            padding: 40px 20px;
+            margin-top: 40px;
+        }
+        .footer-container {
+            max-width: 1100px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        footer h2, footer h3, footer h4, footer h5 { color: white; text-align: left; }
+        footer h2 { margin-bottom: 20px; grid-column: 1 / -1; text-align: center; }
+        .footer-nav-section ul {
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .footer-nav-section li a {
+            text-decoration: none;
+            color: white;
+            background-color: #6c757d;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            display: block;
+            transition: background-color 0.3s;
+        }
+        .footer-nav-section li a:hover { background-color: #5a6268; }
+
+        .division-group { margin-bottom: 15px; }
+        .division-group h5 { font-size: 1.1em; margin-bottom: 10px; border-bottom: 1px solid #6c757d; padding-bottom: 5px; }
+        .division-group ul { gap: 8px; }
+
+        .glossary-link { text-align: center; margin-top: 20px; }
+        .glossary-link a {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .glossary-link a:hover { background-color: #218838; }
+
+        .copyright {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #6c757d;
+            font-size: 0.9em;
+            color: #adb5bd;
+        }
     </style>
 </head>
 <body>
@@ -21,6 +80,8 @@
         <div class="description">{{ item.description }}</div>
     </div>
     {% endfor %}
+
+    {% include 'footer.html' %}
 
 </body>
 </html>
