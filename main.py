@@ -1,6 +1,9 @@
+# main.py (修正版)
+
 import os
 import pandas as pd
 import jinja2
+import matplotlib.pyplot as plt  # 不足していたインポートを追加
 from nba_api.stats.static import teams
 from nba_api.stats.endpoints import leaguedashteamstats, boxscoretraditionalv2, playbyplayv2
 from datetime import datetime, timedelta
@@ -100,10 +103,11 @@ def generate_report_html(game_id, boxscore_df, play_by_play_df):
 
 def get_team_season_stats_summary():
     """
-    全チームの2024-25シーズンサマリーデータを取得する
+    全チームのシーズンサマリーデータを取得する
     """
     try:
-        team_stats = leaguedashteamstats.LeagueDashTeamStats(season="2024-25").get_data_frames()[0]
+        # ★★★★★ シーズンを '2023-24' に変更 ★★★★★
+        team_stats = leaguedashteamstats.LeagueDashTeamStats(season="2023-24").get_data_frames()[0]
         return team_stats
     except Exception as e:
         print(f"リーグデータ取得中にエラーが発生しました: {e}")
@@ -119,7 +123,7 @@ def generate_season_summary_text(team_id, team_stats_df):
     ast = team_data['AST']
     reb = team_data['REB']
     
-    summary = f"2024-25シーズン、このチームは勝率{wins:.1f}%を記録しました。オフェンス面では平均{pts:.1f}得点と{ast:.1f}アシストを記録し、チームの得点効率の高さが際立ちました。また、リバウンドでは平均{reb:.1f}リバウンドと、攻守両面で貢献度の高い選手が多かったことが特徴です。今後のシーズンでのさらなる飛躍が期待されます。"
+    summary = f"2023-24シーズン、このチームは勝率{wins:.1f}%を記録しました。オフェンス面では平均{pts:.1f}得点と{ast:.1f}アシストを記録し、チームの得点効率の高さが際立ちました。また、リバウンドでは平均{reb:.1f}リバウンドと、攻守両面で貢献度の高い選手が多かったことが特徴です。今後のシーズンでのさらなる飛躍が期待されます。"
     return summary
 
 def generate_team_pages(team_stats_df):
@@ -146,7 +150,7 @@ def generate_team_pages(team_stats_df):
             'main_page_url': '../index.html'
         }
         
-        file_name = f"{team_name.replace(' ', '_')}_2024-25_season.html"
+        file_name = f"{team_name.replace(' ', '_')}_2023-24_season.html" # ファイル名もシーズンに合わせる
         html_content = template.render(report_data)
         with open(os.path.join(output_dir, file_name), "w", encoding="utf-8") as f:
             f.write(html_content)
@@ -166,7 +170,7 @@ def generate_index_page(team_stats_df):
     
     teams_for_template = []
     for team in nba_teams:
-        file_name = f"teams/{team['full_name'].replace(' ', '_')}_2024-25_season.html"
+        file_name = f"teams/{team['full_name'].replace(' ', '_')}_2023-24_season.html" # ファイル名もシーズンに合わせる
         teams_for_template.append({
             'name': team['full_name'],
             'url': file_name
@@ -175,15 +179,19 @@ def generate_index_page(team_stats_df):
     html_content = template.render(teams=teams_for_template)
     with open(os.path.join(output_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_content)
+    print("index.html を生成しました。")
+
 
 def main():
     team_stats_df = get_team_season_stats_summary()
     if team_stats_df.empty:
-        print("データが取得できませんでした。")
+        print("データが取得できませんでした。スクリプトを終了します。")
         return
     
+    print("データ取得成功。HTMLファイルの生成を開始します。")
     generate_index_page(team_stats_df)
     generate_team_pages(team_stats_df)
+    print("HTMLファイルの生成が完了しました。")
     
 if __name__ == "__main__":
     main()
