@@ -1,45 +1,51 @@
-# .github/workflows/main.yml
+name: Build and Deploy NBA Stats Website
 
-name: Generate NBA Report
-
+# ワークフローの実行トリガーを設定
 on:
-  schedule:
-    # 日本時間の午前8時に定期実行 (UTC 23:00)
-    - cron: '0 23 * * *'
-  workflow_dispatch: # 手動実行も可能
+  # ★★★★★ この部分を追加 ★★★★★
+  # mainブランチにプッシュされた時に自動実行
+  push:
+    branches:
+      - main
 
+  # 毎日定刻に実行 (これは残してもOKです)
+  schedule:
+    - cron: '0 23 * * *' # UTC 23:00 (JST 8:00)
+
+  # GitHubのActionsタブから手動でも実行可能にする
+  workflow_dispatch:
+
+# GITHUB_TOKEN に書き込み権限を付与
 permissions:
   contents: write
 
 jobs:
-  build-and-deploy: # ジョブ名を変更すると管理しやすくなります
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        # ① バージョンを最新に
         uses: actions/checkout@v4
 
       - name: Set up Python
-        # ① バージョンを最新に
         uses: actions/setup-python@v5
         with:
-          # ② 具体的なバージョンを指定すると、より安定的になります
           python-version: '3.10'
           cache: 'pip'
 
+      # 依存ライブラリのインストール
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Generate report
-        run: python main.py
+      # main.pyを実行して静的ファイルを生成
+      - name: Generate static website
+        # ★★★ 実行コマンドをpython3に修正 ★★★
+        run: python3 main.py
 
+      # 生成されたファイルをgh-pagesブランチにデプロイ
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output
-          # ③ コミット情報を追加
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
