@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import jinja2
 from nba_api.stats.static import teams
-from nba_api.stats.endpoints import leaguegamelog, teamstatsbyseason
+from nba_api.stats.endpoints import leaguedashteamstats
 
 def get_team_season_stats_summary():
     """
@@ -10,7 +10,7 @@ def get_team_season_stats_summary():
     """
     try:
         # 2024-25シーズンのリーグ全体のチームスタッツを取得
-        team_stats = teamstatsbyseason.TeamStatsBySeason(season="2024-25").get_data_frames()[0]
+        team_stats = leaguedashteamstats.LeagueDashTeamStats(season="2024-25").get_data_frames()[0]
         return team_stats
     except Exception as e:
         print(f"リーグデータ取得中にエラーが発生しました: {e}")
@@ -73,7 +73,7 @@ def generate_index_page(team_stats_df):
     """
     トップページを生成
     """
-    nba_teams = teams.s.teams
+    nba_teams = teams.get_teams()
     
     # Jinja2テンプレート設定
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
