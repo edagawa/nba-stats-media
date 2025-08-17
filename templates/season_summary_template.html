@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>{{ team_name }} 2024-25シーズン サマリー</title>
+    <title>{{ team_name }}｜NBA｜2024-25シーズン データサマリー</title>
     <style>
         body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
         h1, h2 { color: #003366; }
@@ -12,12 +12,13 @@
     </style>
 </head>
 <body>
+    <p><a href="{{ main_page_url }}">トップページに戻る</a></p>
     <h1>{{ team_name }} 2024-25シーズン データサマリー</h1>
     
     <p>{{ summary_text }}</p>
 
     <h2>主要スタッツ（シーズン平均）</h2>
-    {{ summary_stats_html|safe }}
+    {{ team_stats_html|safe }}
 
     <p>※ このデータはNBA公式データを元に自動生成されています。</p>
 </body>
