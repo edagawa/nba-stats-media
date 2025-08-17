@@ -307,6 +307,7 @@ if __name__ == "__main__":
     os.makedirs("output/images", exist_ok=True)
     os.makedirs("output/stats", exist_ok=True)
     os.makedirs("output/logos", exist_ok=True)
+    os.makedirs("output/css", exist_ok=True) # ★★★ この行を追加 ★★★
     print("出力ディレクトリの準備が完了しました。")
 
     # --- 2. データファイルの読み込み ---

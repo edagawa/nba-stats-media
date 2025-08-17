@@ -4,42 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ team_name }} | シーズン比較</title>
-    <style>
-        /* ... 他 ... */
-        /* ★★★ ここから追加 ★★★ */
-        .breadcrumb {
-            padding: 10px 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .breadcrumb a {
-            color: var(--link-color);
-            text-decoration: none;
-        }
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        .breadcrumb span {
-            color: #6c757d;
-        }
-        /* ★★★ ここまで追加 ★★★ */
-    </style>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-
     <header>
         <h1>{{ team_name }}</h1>
         <nav>
             <a href="../index.html">チーム一覧</a>
         </nav>
     </header>
-
     <div class="container">
         <main>
             <div class="breadcrumb">
                 <a href="../index.html">トップページ</a> &gt; <span>{{ team_name }}</span>
             </div>
+            <section class="team-profile">
+                <div class="profile-header">
+                    <img src="../logos/{{ image_filename }}.svg" alt="{{ team_name }} Logo" class="team-logo" onerror="this.style.display='none'">
+                    <h2>{{ team_name }}</h2>
+                </div>
+                <div class="team-details">
+                    <h3>チーム情報</h3>
+                    <ul>
+                        <li><strong>アリーナ:</strong> {{ details.arena | default('N/A', true) }}</li>
+                        <li><strong>所在地:</strong> {{ details.location | default('N/A', true) }}</li>
+                        <li><strong>カンファレンス:</strong> {{ details.conference | default('N/A', true) }}</li>
+                        <li><strong>ディビジョン:</strong> {{ details.division | default('N/A', true) }}</li>
+                        <li><strong>優勝回数:</strong> {{ details.championships | default('N/A', true) }}</li>
+                    </ul>
+                </div>
+            </section>
+            <h2>シーズン比較: 2023-24 vs 2024-25</h2>
+            <div class="highlight">
+                <p>{{ summary_text }}</p>
+            </div>
+            <section class="comparison-graph">
+                <h3>主要指標の変化</h3>
+                <figure>
+                    <img src="../images/comparison_{{ image_filename }}.svg" alt="{{ team_name }} シーズン比較グラフ">
+                    <figcaption>各指標のリーグ内偏差値をレーダーチャートで表示</figcaption>
+                </figure>
+            </section>
             <div class="seasons-container">
                 <div class="season-card">
                     <h3>2023-24シーズン</h3>
@@ -52,8 +57,6 @@
             </div>
         </main>
     </div>
-
     {% include 'footer.html' %}
-
 </body>
 </html>
