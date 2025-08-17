@@ -1,47 +1,45 @@
 # .github/workflows/main.yml
 
-name: Build and Deploy NBA Stats Website
+name: Generate NBA Report
 
 on:
-  workflow_dispatch: # 手動実行をトリガー
-  push:
-    branches:
-      - main # mainブランチへのプッシュでも実行
+  schedule:
+    # 日本時間の午前8時に定期実行 (UTC 23:00)
+    - cron: '0 23 * * *'
+  workflow_dispatch: # 手動実行も可能
 
-# ワークフローに与える権限を設定
 permissions:
-  contents: write # リポジトリへの書き込み権限を許可
+  contents: write
 
 jobs:
-  build-and-deploy:
+  build-and-deploy: # ジョブ名を変更すると管理しやすくなります
     runs-on: ubuntu-latest
     steps:
-      # 1. リポジトリのコードをチェックアウト
       - name: Checkout repository
+        # ① バージョンを最新に
         uses: actions/checkout@v4
 
-      # 2. Python環境のセットアップ
       - name: Set up Python
+        # ① バージョンを最新に
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10' # プロジェクトで使用するPythonのバージョンを指定
+          # ② 具体的なバージョンを指定すると、より安定的になります
+          python-version: '3.10'
           cache: 'pip'
 
-      # 3. 依存ライブラリのインストール
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. main.pyを実行して静的ファイルを生成
-      - name: Generate static website
+      - name: Generate report
         run: python main.py
 
-      # 5. 生成されたファイルをgh-pagesブランチにデプロイ
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./output # main.pyがファイルを生成するディレクトリを指定 (例: ./output)
+          publish_dir: ./output
+          # ③ コミット情報を追加
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
