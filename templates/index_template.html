@@ -2,23 +2,34 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>NBA {{ season_string }}シーズン チームサマリー</title> 
+    <title>NBA {{ season_string }} | チームサマリー</title> 
     <style>
         body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
-        h1 { text-align: center; color: #003366; }
+        h1, h2 { text-align: center; color: #003366; }
         ul { list-style-type: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
         li { margin: 10px; }
         a { text-decoration: none; color: white; background-color: #0077c2; padding: 10px 20px; border-radius: 5px; }
         a:hover { background-color: #005a9c; }
+        .section { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px;}
     </style>
 </head>
 <body>
-    <h1>NBA {{ season_string }}シーズン チーム総括</h1>
+    <h1>NBA {{ season_string }}</h1>
     <p style="text-align: center;">見たいチームのロゴをクリックしてください。</p>
     <ul>
         {% for team in teams %}
         <li><a href="{{ team.url }}">{{ team.name }}</a></li>
         {% endfor %}
     </ul>
-</body>
+
+    <div class="section">
+        <h2>指標別ランキング</h2>
+        <p style="text-align: center;">指標別に全チームのシーズン比較を確認できます。</p>
+        <ul>
+            {% for stat in stat_pages %}
+            <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    </body>
 </html>

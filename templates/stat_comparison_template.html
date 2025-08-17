@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>指標別比較: {{ stat_name }} | NBA Stats</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2 { color: #003366; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        img { max-width: 100%; height: auto; display: block; margin: 20px 0; border: 1px solid #ddd; }
+        .nav-link { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <p class="nav-link"><a href="../index.html">トップページに戻る</a></p>
+    <h1>指標別比較: {{ stat_name_jp }}</h1>
+
+    <h2>全チーム比較グラフ (2023-24 vs 2024-25)</h2>
+    <p style="text-align: center;">2024-25シーズンのスタッツを基準に降順でソートしています。</p>
+    <img src="../images/stat_{{ stat_name_en }}.svg" alt="{{ stat_name_jp }} 比較グラフ">
+    
+    <h2>詳細データ</h2>
+    {{ data_table_html|safe }}
+</body>
+</html>
