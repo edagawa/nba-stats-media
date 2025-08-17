@@ -5,6 +5,7 @@ import pandas as pd
 import jinja2
 import matplotlib.pyplot as plt
 import numpy as np
+import re  # ★★★ この行を追加 ★★★
 
 # 日本語フォントがない環境でもエラーが出ないように、デフォルトのsans-serifを指定
 plt.rcParams['font.family'] = 'sans-serif'
@@ -75,6 +76,67 @@ TEAM_NAME_MAP = {
     "Toronto": "Toronto Raptors", "Utah": "Utah Jazz", "Washington": "Washington Wizards"
 }
 
+# ★★★ 選手ページ生成関数を追加 ★★★
+def generate_player_pages(env):
+    """選手比較ページを生成する"""
+    print("--- 選手ページの生成開始 ---")
+    try:
+        df_s1 = pd.read_csv("player_stats_2023-24.csv")
+        df_s2 = pd.read_csv("player_stats_2024-25.csv")
+    except FileNotFoundError:
+        print("警告: 選手データ(CSV)が見つかりません。get_player_data.py を実行してください。")
+        return
+
+    df_merged = pd.merge(df_s2, df_s1, on='Player', how='left', suffixes=('_s2', '_s1'))
+    template = env.get_template('player_comparison_template.html')
+    stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
+    
+    # フッター用のデータを生成
+    stat_pages_footer, all_teams_structured_footer = get_footer_data('../teams/', '../stats/')
+
+    for index, player_data in df_merged.iterrows():
+        player_name = player_data.get('Player', 'Unknown')
+        try:
+            player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
+
+            stats_s2_table = pd.DataFrame(player_data.filter(like='_s2')).rename(index=lambda x: x.replace('_s2', ''))
+            stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
+            
+            # FutureWarningを解消するため、数値に変換してからfillnaを実行
+            graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
+            graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
+            graph_stats_s2 = graph_stats_s2_series.fillna(0).values
+            graph_stats_s1 = graph_stats_s1_series.fillna(0).values
+
+            x = np.arange(len(stats_to_compare))
+            width = 0.35
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.bar(x - width/2, graph_stats_s1, width, label='2023-24')
+            ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
+            ax.set_ylabel('Value')
+            ax.set_title(f'Key Stats Comparison: {player_name}')
+            ax.set_xticks(x)
+            ax.set_xticklabels(stats_to_compare)
+            ax.legend()
+            fig.tight_layout()
+            plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
+            plt.close()
+            
+            render_data = {
+                'player_name': player_name,
+                'player_filename': player_filename,
+                'player_info': stats_s2_table.T.to_dict('records')[0],
+                'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'),
+                'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'),
+                'stat_pages': stat_pages_footer, # フッター用データを追加
+                'all_teams_structured': all_teams_structured_footer # フッター用データを追加
+            }
+            output_path = f"output/players/{player_filename}.html"
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(template.render(render_data))
+        except Exception as e:
+            print(f"警告: {player_name} のページ生成中にエラー: {e}")
+    print("--- 選手ページの生成完了 ---")
 
 # --- ヘルパー関数 ---
 def generate_team_summary(s1_stats, s2_stats):
@@ -187,7 +249,8 @@ def generate_glossary_page(env):
         f.write(template.render(render_data))
     print("--- 指標解説ページの生成完了 ---")
 
-def generate_comparison_pages(df_s1, df_s2, env):
+# ★★★ チームページ生成関数を修正 ★★★
+def generate_comparison_pages(df_s1, df_s2, df_players, env):
     """チーム別比較ページを生成する"""
     print("--- チーム別比較ページの生成開始 ---")
     df_s1_indexed = df_s1.set_index('Team')
@@ -196,7 +259,7 @@ def generate_comparison_pages(df_s1, df_s2, env):
     template = env.get_template('comparison_template.html')
     
     stats_to_compare = ['PACE', 'OFF EFF', 'DEF EFF', 'NET EFF', 'TS%', 'AST', 'TO']
-    stat_pages, all_teams_structured = get_footer_data('./', '../stats/')
+    stat_pages_footer, all_teams_structured_footer = get_footer_data('./', '../stats/')
 
     for team in all_teams:
         try:
@@ -222,22 +285,30 @@ def generate_comparison_pages(df_s1, df_s2, env):
             plt.savefig(f"output/images/comparison_{image_filename}.svg", format="svg")
             plt.close()
 
-            # サマリーテキストを生成
             summary = generate_team_summary(stats1, stats2)
             
-            # HTML生成
-            # ★★★ ここから修正 ★★★
+            player_list = []
+            if df_players is not None:
+                team_roster = df_players[df_players['full_team_name'] == team]
+                for _, player in team_roster.iterrows():
+                    player_name = player['Player']
+                    player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
+                    player_list.append({
+                        'name': player_name,
+                        'url': f"../players/{player_filename}.html"
+                    })
+            
             render_data = { 
                 'team_name': team,
                 'image_filename': image_filename, 
                 'stats_s1': stats1.to_frame(name='Value').to_html(), 
                 'stats_s2': stats2.to_frame(name='Value').to_html(),
                 'details': TEAM_DETAILS.get(team, {}),
-                'all_teams_structured': all_teams_structured, 
-                'stat_pages': stat_pages,
+                'all_teams_structured': all_teams_structured_footer, 
+                'stat_pages': stat_pages_footer,
                 'summary_text': summary,
+                'player_list': player_list
             }
-            # ★★★ ここまで修正 ★★★
 
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
@@ -302,15 +373,15 @@ def generate_stat_pages(df_s1, df_s2, env):
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     
-    # --- 1. ディレクトリ構造の確認と作成 ---
     os.makedirs("output/teams", exist_ok=True)
     os.makedirs("output/images", exist_ok=True)
     os.makedirs("output/stats", exist_ok=True)
     os.makedirs("output/logos", exist_ok=True)
-    os.makedirs("output/css", exist_ok=True) # ★★★ この行を追加 ★★★
+    os.makedirs("output/css", exist_ok=True)
+    os.makedirs("output/players", exist_ok=True)
+    os.makedirs("output/images/players", exist_ok=True)
     print("出力ディレクトリの準備が完了しました。")
 
-    # --- 2. データファイルの読み込み ---
     try:
         df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv")
         df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
@@ -320,36 +391,46 @@ if __name__ == "__main__":
         df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
         print("チーム名を正式名称に統一しました。")
 
-
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']
         df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
         print("NET EFF列の計算が完了しました。")
 
-        # サマリー生成のために、リーグ内順位を計算して列を追加
         df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False)
         df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False)
-        df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True) # DEFは低い方が良い
+        df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True)
         print("2024-25シーズンのリーグ内ランクを計算しました。")
 
     except FileNotFoundError as e:
         print(f"エラー: データファイルが見つかりません。{e}")
-        print("get_data.py と get_data_24-25.py を実行して、CSVファイルを先に生成してください。")
         sys.exit(1)
     except KeyError as e:
         print(f"エラー: CSVファイルに必要な列が存在しません。{e}")
-        print("CSVファイルの内容を確認してください。")
         sys.exit(1)
+    
+    try:
+        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
+        team_abbr_map = {
+            'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 'CHI': 'Chicago Bulls',
+            'CLE': 'Cleveland Cavaliers', 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons', 'GS': 'Golden State Warriors',
+            'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers', 'LAC': 'LA Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies',
+            'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves', 'NO': 'New Orleans Pelicans', 'NY': 'New York Knicks',
+            'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
+            'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards'
+        }
+        df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(x.split('/')[0].strip().upper()))
+    except FileNotFoundError:
+        df_players_24_25 = None
+        print("警告: 選手データが見つかりませんでした。チームページの選手一覧は表示されません。")
 
 
-    # --- 3. Jinja2テンプレートエンジン初期化 ---
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     print("テンプレートエンジンの準備が完了しました。")
 
-    # --- 4. 各種HTMLページの生成 ---
     generate_main_index(env)
     generate_glossary_page(env)
     generate_stat_pages(df_23_24, df_24_25, env)
-    generate_comparison_pages(df_23_24, df_24_25, env)
+    generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, env)
+    generate_player_pages(env)
     
     print("\n--- すべての処理が完了しました ---")
