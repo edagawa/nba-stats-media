@@ -2,71 +2,262 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ team_name }} | シーズン比較</title>
     <style>
-        body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
-        h1, h2, h3, h4 { color: #003366; }
-        h1, h2 { text-align: center; }
-        .seasons { display: flex; justify-content: space-around; }
-        .season-card { width: 48%; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        img { max-width: 100%; height: auto; display: block; margin: 20px 0; border: 1px solid #ddd; }
-        footer { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
-        footer ul { list-style-type: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
-        footer li { margin: 5px; }
-        footer a { text-decoration: none; color: white; background-color: #6c757d; padding: 8px 15px; border-radius: 5px; font-size: 0.9em; }
-        footer a:hover { background-color: #5a6268; }
-        .division-group { width: 100%; margin-bottom: 20px; }
-        .glossary-link { text-align: center; margin-top: 15px; }
-        .glossary-link a { background-color: #28a745; }
+        :root {
+            --primary-color: #003366;
+            --secondary-color: #f4f7fa;
+            --text-color: #333;
+            --border-color: #ddd;
+            --header-bg: #002244;
+            --footer-bg: #343a40;
+            --link-color: #007bff;
+            --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1100px; margin: auto; padding: 20px; }
+        h1, h2, h3, h4, h5, h6 { color: var(--primary-color); }
+
+        /* Header */
+        header {
+            background-color: var(--header-bg);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+        }
+        header h1 { color: white; margin: 0; }
+        nav { margin-top: 10px; }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+            transition: opacity 0.3s;
+        }
+        nav a:hover { opacity: 0.8; }
+
+        /* Main Content */
+        main { background-color: white; padding: 30px; border-radius: 8px; box-shadow: var(--card-shadow); }
+
+        .breadcrumb { margin-bottom: 20px; }
+        .breadcrumb a { color: var(--link-color); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        
+        /* Highlight Section */
+        .highlight {
+            background-color: #eaf6ff;
+            border-left: 5px solid var(--primary-color);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .comparison-graph { text-align: center; margin: 40px 0; }
+        .comparison-graph img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .comparison-graph figcaption {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        /* Seasons Comparison */
+        .seasons-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .season-card {
+            width: 100%;
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: 600;
+        }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #e9ecef; }
+        caption {
+            caption-side: bottom;
+            text-align: right;
+            font-size: 0.8em;
+            color: #6c757d;
+            padding-top: 8px;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--footer-bg);
+            color: #f8f9fa;
+            padding: 40px 20px;
+            margin-top: 40px;
+        }
+        .footer-container {
+            max-width: 1100px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        footer h2, footer h3, footer h4, footer h5 { color: white; text-align: left; }
+        footer h2 { margin-bottom: 20px; grid-column: 1 / -1; text-align: center; }
+        .footer-nav-section ul {
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .footer-nav-section li a {
+            text-decoration: none;
+            color: white;
+            background-color: #6c757d;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            display: block;
+            transition: background-color 0.3s;
+        }
+        .footer-nav-section li a:hover { background-color: #5a6268; }
+
+        .division-group { margin-bottom: 15px; }
+        .division-group h5 { font-size: 1.1em; margin-bottom: 10px; border-bottom: 1px solid #6c757d; padding-bottom: 5px; }
+        .division-group ul { gap: 8px; }
+
+        .glossary-link { text-align: center; margin-top: 20px; }
+        .glossary-link a {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+        }
         .glossary-link a:hover { background-color: #218838; }
+
+        .copyright {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #6c757d;
+            font-size: 0.9em;
+            color: #adb5bd;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            main { padding: 15px; }
+            .seasons-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .season-card { width: auto; } /* Let it stretch */
+        }
     </style>
 </head>
 <body>
-    <p><a href="../index.html">チーム一覧に戻る</a></p>
-    <h1>{{ team_name }} シーズン比較</h1>
 
-    <h2>主要指標の変化 (2023-24 vs 2024-25)</h2>
-    <img src="../images/comparison_{{ image_filename }}.svg" alt="シーズン比較グラフ">
-    
-    <div class="seasons">
-        <div class="season-card">
-            <h2>2023-24シーズン</h2>
-            {{ stats_s1|safe }}
-        </div>
-        <div class="season-card">
-            <h2>2024-25シーズン</h2>
-            {{ stats_s2|safe }}
-        </div>
+    <header>
+        <h1>{{ team_name }}</h1>
+        <nav>
+            <a href="../index.html">チーム一覧</a>
+            </nav>
+    </header>
+
+    <div class="container">
+        <main>
+            <p class="breadcrumb"><a href="../index.html">チーム一覧に戻る</a></p>
+            <h2>シーズン比較: 2023-24 vs 2024-25</h2>
+            
+            <div class="highlight">
+                <p><strong>サマリー:</strong> ここに、2シーズン間のパフォーマンスにおける最も顕著な変化や重要なポイントを記述します。（例：オフェンス効率は大幅に向上しましたが、ディフェンスリバウンドに課題が見られます。）</p>
+            </div>
+
+            <section class="comparison-graph">
+                <h3>主要指標の変化</h3>
+                <figure>
+                    <img src="../images/comparison_{{ image_filename }}.svg" alt="{{ team_name }} シーズン比較グラフ">
+                    <figcaption>各指標のリーグ内偏差値をレーダーチャートで表示</figcaption>
+                </figure>
+            </section>
+            
+            <div class="seasons-container">
+                <div class="season-card">
+                    <h3>2023-24シーズン</h3>
+                    {{ stats_s1|safe }}
+                </div>
+                <div class="season-card">
+                    <h3>2024-25シーズン</h3>
+                    {{ stats_s2|safe }}
+                </div>
+            </div>
+        </main>
     </div>
 
     <footer>
-        <h2>チーム別比較</h2>
-        {% for conf, divisions in all_teams_structured.items() %}
-            <h3 style="text-align:center;">{{ conf }}</h3>
-            {% for div, teams in divisions.items() %}
-                <div class="division-group">
-                    <h4 style="text-align:center;">{{ div }}</h4>
-                    <ul>
-                        {% for team in teams %}
-                        <li><a href="{{ team.url }}">{{ team.name }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endfor %}
-        {% endfor %}
+        <div class="footer-container">
+            <h2>他の情報を見る</h2>
+            <div class="footer-nav-section" id="team-links">
+                <h3>チーム別比較</h3>
+                {% for conf, divisions in all_teams_structured.items() %}
+                    <h4>{{ conf }}</h4>
+                    {% for div, teams in divisions.items() %}
+                        <div class="division-group">
+                            <h5>{{ div }}</h5>
+                            <ul>
+                                {% for team in teams %}
+                                <li><a href="{{ team.url }}">{{ team.name }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
 
-        <h2 style="margin-top: 20px;">指標別ランキング</h2>
-        <ul>
-            {% for stat in stat_pages %}
-            <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
-            {% endfor %}
-        </ul>
-        <div class="glossary-link">
-            <a href="../glossary.html">指標の解説 (Glossary) はこちら</a>
+            <div class="footer-nav-section" id="stat-links">
+                <h3>指標別ランキング</h3>
+                <ul>
+                    {% for stat in stat_pages %}
+                    <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                <div class="glossary-link">
+                    <a href="../glossary.html">指標の解説 (Glossary) はこちら</a>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            <p>&copy; 2025 nba-stats-media. All Rights Reserved.</p>
         </div>
     </footer>
+
 </body>
 </html>
