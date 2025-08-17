@@ -3,30 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <title>指標別比較: True Shooting % | NBA Stats</title>
-    <style>
-        body { font-family: sans-serif; line-height: 1.6; max-width: 1200px; margin: auto; padding: 20px; }
-        h1, h2, h3, h4 { color: #003366; text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        img { max-width: 100%; height: auto; display: block; margin: 20px 0; border: 1px solid #ddd; }
-        .breadcrumb { padding: 10px 15px; background-color: #f8f9fa; border-radius: 5px; margin-bottom: 20px; }
-        .breadcrumb a { color: #007bff; text-decoration: none; }
-        .breadcrumb a:hover { text-decoration: underline; }
-        .breadcrumb span { color: #6c757d; }
-    </style>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-    <div class="breadcrumb">
-        <a href="../index.html">トップページ</a> &gt; <span>指標別ランキング</span> &gt; <span>True Shooting %</span>
-    </div>
-    <h1>指標別比較: True Shooting %</h1>
-    <h2>全チーム比較グラフ (2023-24 vs 2024-25)</h2>
-    <p style="text-align: center;">2024-25シーズンのスタッツを基準に降順でソートしています。</p>
-    <img src="../images/stat_TS_PCT.svg" alt="True Shooting % 比較グラフ">
-    
-    <h2>詳細データ</h2>
-    <table border="1" class="dataframe">
+    <main class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">トップページ</a> &gt; <span>指標別ランキング</span> &gt; <span>True Shooting %</span>
+        </div>
+        <h1>指標別比較: True Shooting %</h1>
+        <h2>全チーム比較グラフ (2023-24 vs 2024-25)</h2>
+        <p>2024-25シーズンのスタッツを基準に降順（DEF EFFのみ昇順）でソートしています。</p>
+        <div class="stat-graph">
+            <img src="../images/stat_TS_PCT.svg" alt="True Shooting % 比較グラフ">
+        </div>
+        <h2>詳細データ</h2>
+        <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
       <th></th>
@@ -192,7 +183,7 @@
     </tr>
   </tbody>
 </table>
-
+    </main>
     <footer>
     <div class="footer-container">
         <h2>他の情報を見る</h2>
@@ -341,6 +332,5 @@
         <p>&copy; 2025 nba-stats-media. All Rights Reserved.</p>
     </div>
 </footer>
-
 </body>
 </html>

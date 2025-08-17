@@ -4,42 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Miami Heat | シーズン比較</title>
-    <style>
-        /* ... 他 ... */
-        /* ★★★ ここから追加 ★★★ */
-        .breadcrumb {
-            padding: 10px 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .breadcrumb a {
-            color: var(--link-color);
-            text-decoration: none;
-        }
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        .breadcrumb span {
-            color: #6c757d;
-        }
-        /* ★★★ ここまで追加 ★★★ */
-    </style>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-
     <header>
         <h1>Miami Heat</h1>
         <nav>
             <a href="../index.html">チーム一覧</a>
         </nav>
     </header>
-
     <div class="container">
         <main>
             <div class="breadcrumb">
                 <a href="../index.html">トップページ</a> &gt; <span>Miami Heat</span>
             </div>
+            <section class="team-profile">
+                <div class="profile-header">
+                    <img src="../logos/Miami_Heat.svg" alt="Miami Heat Logo" class="team-logo" onerror="this.style.display='none'">
+                    <h2>Miami Heat</h2>
+                </div>
+                <div class="team-details">
+                    <h3>チーム情報</h3>
+                    <ul>
+                        <li><strong>アリーナ:</strong> Kaseya Center</li>
+                        <li><strong>所在地:</strong> Miami, Florida</li>
+                        <li><strong>カンファレンス:</strong> Eastern</li>
+                        <li><strong>ディビジョン:</strong> Southeast</li>
+                        <li><strong>優勝回数:</strong> 3 (Most recent: 2013)</li>
+                    </ul>
+                </div>
+            </section>
+            <h2>シーズン比較: 2023-24 vs 2024-25</h2>
+            <div class="highlight">
+                <p>今シーズンは攻守両面でバランスの取れた、安定感のあるパフォーマンスを見せています。 一方で、今後の更なる飛躍のためには、リーグ下位に苦しむ試合のペースの立て直しが鍵となるでしょう。</p>
+            </div>
+            <section class="comparison-graph">
+                <h3>主要指標の変化</h3>
+                <figure>
+                    <img src="../images/comparison_Miami_Heat.svg" alt="Miami Heat シーズン比較グラフ">
+                    <figcaption>各指標のリーグ内偏差値をレーダーチャートで表示</figcaption>
+                </figure>
+            </section>
             <div class="seasons-container">
                 <div class="season-card">
                     <h3>2023-24シーズン</h3>
@@ -170,7 +175,6 @@
             </div>
         </main>
     </div>
-
     <footer>
     <div class="footer-container">
         <h2>他の情報を見る</h2>
@@ -319,6 +323,5 @@
         <p>&copy; 2025 nba-stats-media. All Rights Reserved.</p>
     </div>
 </footer>
-
 </body>
 </html>
