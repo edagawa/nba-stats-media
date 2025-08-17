@@ -5,7 +5,8 @@
     <title>{{ team_name }} | シーズン比較</title>
     <style>
         body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: auto; padding: 20px; }
-        h1, h2 { color: #003366; }
+        h1, h2, h3, h4 { color: #003366; }
+        h1, h2 { text-align: center; }
         .seasons { display: flex; justify-content: space-around; }
         .season-card { width: 48%; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
@@ -17,6 +18,7 @@
         footer li { margin: 5px; }
         footer a { text-decoration: none; color: white; background-color: #6c757d; padding: 8px 15px; border-radius: 5px; font-size: 0.9em; }
         footer a:hover { background-color: #5a6268; }
+        .division-group { width: 100%; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -39,17 +41,26 @@
 
     <footer>
         <h2>チーム別比較</h2>
-        <ul>
-            {% for team in all_teams %}
-            <li><a href="{{ team.url }}">{{ team.name }}</a></li>
+        {% for conf, divisions in all_teams_structured.items() %}
+            <h3 style="text-align:center;">{{ conf }}</h3>
+            {% for div, teams in divisions.items() %}
+                <div class="division-group">
+                    <h4 style="text-align:center;">{{ div }}</h4>
+                    <ul>
+                        {% for team in teams %}
+                        <li><a href="{{ team.url }}">{{ team.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
             {% endfor %}
-        </ul>
+        {% endfor %}
+
         <h2 style="margin-top: 20px;">指標別ランキング</h2>
         <ul>
             {% for stat in stat_pages %}
-            <li><a href="../{{ stat.url }}">{{ stat.name }}</a></li>
+            <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
             {% endfor %}
         </ul>
     </footer>
-    </body>
+</body>
 </html>
