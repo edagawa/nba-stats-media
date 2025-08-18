@@ -16,11 +16,16 @@ NBA_TEAMS = [
 def fetch_latest_videos():
     """YouTube APIを使い、各チームの最新動画IDを取得してJSONファイルに保存する"""
     
-    API_KEY = "AIzaSyBxcz2N1koMUbmbp_6sOyjCMjHuEoNdmg4" # ★★★ あなたのAPIキーを再度入力してください ★★★
+    # ★★★ ここから修正 ★★★
+    # 環境変数からAPIキーを読み込む
+    API_KEY = os.environ.get("YOUTUBE_API_KEY")
     
-    if API_KEY == "YOUR_API_KEY_HERE":
-        print("エラー: API_KEYをget_youtube_data.pyに入力してください。")
+    # APIキーが設定されていない場合はエラーメッセージを出して終了
+    if not API_KEY:
+        print("エラー: 環境変数 'YOUTUBE_API_KEY' が設定されていません。")
+        print("実行前にターミナルで export YOUTUBE_API_KEY='あなたのキー' を実行してください。")
         return
+    # ★★★ ここまで修正 ★★★
 
     youtube = build('youtube', 'v3', developerKey=API_KEY)
     video_links = {}
@@ -28,7 +33,7 @@ def fetch_latest_videos():
     print("--- 各チームの最新動画を取得しています ---")
     for team_name in NBA_TEAMS:
         try:
-            # 1. チーム名でYouTubeチャンネルを検索して、チャンネルIDを取得する
+            # チーム名でYouTubeチャンネルを検索して、チャンネルIDを取得する
             search_request = youtube.search().list(
                 q=f"{team_name} official channel",
                 part='snippet',
@@ -44,7 +49,7 @@ def fetch_latest_videos():
             
             channel_id = search_response['items'][0]['id']['channelId']
 
-            # 2. チャンネルIDからアップロード動画のリストIDを取得する
+            # チャンネルIDからアップロード動画のリストIDを取得する
             channel_request = youtube.channels().list(
                 part='contentDetails',
                 id=channel_id
@@ -52,7 +57,7 @@ def fetch_latest_videos():
             channel_response = channel_request.execute()
             playlist_id = channel_response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
             
-            # 3. 動画リストから最新の動画を1件取得する
+            # 動画リストから最新の動画を1件取得する
             playlist_request = youtube.playlistItems().list(
                 part='snippet',
                 playlistId=playlist_id,
