@@ -6,6 +6,7 @@ import jinja2
 import matplotlib.pyplot as plt
 import numpy as np
 import re  # ★★★ この行を追加 ★★★
+import json
 
 # 日本語フォントがない環境でもエラーが出ないように、デフォルトのsans-serifを指定
 plt.rcParams['font.family'] = 'sans-serif'
@@ -270,7 +271,7 @@ def generate_glossary_page(env):
     print("--- 指標解説ページの生成完了 ---")
 
 # ★★★ チームページ生成関数を修正 ★★★
-def generate_comparison_pages(df_s1, df_s2, df_players, env):
+def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env):
     """チーム別比較ページを生成する"""
     print("--- チーム別比較ページの生成開始 ---")
     df_s1_indexed = df_s1.set_index('Team')
@@ -317,6 +318,9 @@ def generate_comparison_pages(df_s1, df_s2, df_players, env):
                         'name': player_name,
                         'url': f"../players/{player_filename}.html"
                     })
+
+            video_id = video_data.get(team)
+            video_embed_url = f"https://www.youtube.com/embed/{video_id}" if video_id else None
             
             render_data = { 
                 'team_name': team,
@@ -327,7 +331,8 @@ def generate_comparison_pages(df_s1, df_s2, df_players, env):
                 'all_teams_structured': all_teams_structured_footer, 
                 'stat_pages': stat_pages_footer,
                 'summary_text': summary,
-                'player_list': player_list
+                'player_list': player_list,
+                'video_embed_url': video_embed_url,
             }
 
             output_path = f"output/teams/comparison_{image_filename}.html"
@@ -393,6 +398,7 @@ def generate_stat_pages(df_s1, df_s2, env):
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     
+    # --- 1. ディレクトリ構造の確認と作成 ---
     os.makedirs("output/teams", exist_ok=True)
     os.makedirs("output/images", exist_ok=True)
     os.makedirs("output/stats", exist_ok=True)
@@ -402,6 +408,7 @@ if __name__ == "__main__":
     os.makedirs("output/images/players", exist_ok=True)
     print("出力ディレクトリの準備が完了しました。")
 
+    # --- 2. データファイルの読み込み ---
     try:
         df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv")
         df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
@@ -411,13 +418,14 @@ if __name__ == "__main__":
         df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
         print("チーム名を正式名称に統一しました。")
 
+
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']
         df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
         print("NET EFF列の計算が完了しました。")
 
         df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False)
         df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False)
-        df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True)
+        df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True) 
         print("2024-25シーズンのリーグ内ランクを計算しました。")
 
     except FileNotFoundError as e:
@@ -437,20 +445,31 @@ if __name__ == "__main__":
             'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
             'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards'
         }
-        df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(x.split('/')[0].strip().upper()))
+        df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[0].strip().upper()))
     except FileNotFoundError:
         df_players_24_25 = None
         print("警告: 選手データが見つかりませんでした。チームページの選手一覧は表示されません。")
+        
+    try:
+        with open('youtube_videos.json', 'r') as f:
+            video_data = json.load(f)
+        print("youtube_videos.json の読み込みに成功しました。")
+    except FileNotFoundError:
+        video_data = {}
+        print("警告: youtube_videos.jsonが見つかりません。動画は表示されません。")
 
 
+    # --- 3. Jinja2テンプレートエンジン初期化 ---
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     print("テンプレートエンジンの準備が完了しました。")
 
+    # --- 4. 各種HTMLページの生成 ---
     generate_main_index(env)
     generate_glossary_page(env)
     generate_stat_pages(df_23_24, df_24_25, env)
-    generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, env)
+    # ★★★ ここを修正 ★★★
+    generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, video_data, env)
     generate_player_pages(env)
     
     print("\n--- すべての処理が完了しました ---")
