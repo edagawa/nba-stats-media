@@ -36,6 +36,14 @@
                     </ul>
                 </div>
             </section>
+            {% if video_embed_url %}
+            <section class="video-section">
+                <h2>最新動画</h2>
+                <div class="video-container">
+                    <iframe src="{{ video_embed_url }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </section>
+            {% endif %}
             <h2>シーズン比較: 2023-24 vs 2024-25</h2>
             <div class="highlight">
                 <p>{{ summary_text }}</p>
