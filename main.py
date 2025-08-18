@@ -87,11 +87,22 @@ def generate_player_pages(env):
         print("警告: 選手データ(CSV)が見つかりません。get_player_data.py を実行してください。")
         return
 
+    # チーム名の正式名称をマッピングに追加
+    team_abbr_map = {
+        'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 'CHI': 'Chicago Bulls',
+        'CLE': 'Cleveland Cavaliers', 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons', 'GS': 'Golden State Warriors',
+        'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers', 'LAC': 'LA Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies',
+        'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves', 'NO': 'New Orleans Pelicans', 'NY': 'New York Knicks',
+        'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
+        'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards'
+    }
+    df_s2['full_team_name'] = df_s2['Team'].apply(lambda x: team_abbr_map.get(x.split('/')[0].strip().upper()))
+
+
     df_merged = pd.merge(df_s2, df_s1, on='Player', how='left', suffixes=('_s2', '_s1'))
     template = env.get_template('player_comparison_template.html')
     stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
     
-    # フッター用のデータを生成
     stat_pages_footer, all_teams_structured_footer = get_footer_data('../teams/', '../stats/')
 
     for index, player_data in df_merged.iterrows():
@@ -102,7 +113,6 @@ def generate_player_pages(env):
             stats_s2_table = pd.DataFrame(player_data.filter(like='_s2')).rename(index=lambda x: x.replace('_s2', ''))
             stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
             
-            # FutureWarningを解消するため、数値に変換してからfillnaを実行
             graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
             graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
             graph_stats_s2 = graph_stats_s2_series.fillna(0).values
@@ -122,15 +132,25 @@ def generate_player_pages(env):
             plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
             plt.close()
             
+            # ★★★ ここから修正 ★★★
+            team_name = player_data.get('full_team_name', '')
+            team_url = ""
+            if team_name:
+                team_url = f"../teams/comparison_{team_name.replace(' ', '_')}.html"
+
             render_data = {
                 'player_name': player_name,
                 'player_filename': player_filename,
                 'player_info': stats_s2_table.T.to_dict('records')[0],
                 'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'),
                 'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'),
-                'stat_pages': stat_pages_footer, # フッター用データを追加
-                'all_teams_structured': all_teams_structured_footer # フッター用データを追加
+                'stat_pages': stat_pages_footer,
+                'all_teams_structured': all_teams_structured_footer,
+                'team_name': team_name,
+                'team_url': team_url
             }
+            # ★★★ ここまで修正 ★★★
+
             output_path = f"output/players/{player_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(template.render(render_data))

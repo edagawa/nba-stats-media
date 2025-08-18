@@ -18,15 +18,14 @@
     <div class="container">
         <main>
             <div class="breadcrumb">
-                <a href="../index.html">トップページ</a> &gt; <span>{{ player_name }}</span>
+                <a href="../index.html">トップページ</a> &gt; <a href="{{ team_url }}">{{ team_name }}</a> &gt; <span>{{ player_name }}</span>
             </div>
             <section class="team-profile">
                 <div class="team-details">
                     <h3>選手情報 (2024-25)</h3>
                     <ul>
                         <li><strong>チーム:</strong> {{ player_info.Team | default('N/A') }}</li>
-                        <li><strong>ポジション:</strong> {{ player_info.POS | default('N/A') }}</li>
-                    </ul>
+                        </ul>
                 </div>
             </section>
             <h2>シーズン比較: 2023-24 vs 2024-25</h2>
