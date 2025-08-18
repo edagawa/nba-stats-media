@@ -349,7 +349,9 @@ def generate_stat_pages(df_s1, df_s2, env):
 
     for stat_short, stat_full in STATS_TO_GENERATE.items():
         try:
-            sort_ascending = True if stat_short == 'DEF EFF' else False
+            # ★★★ ここを修正 ★★★
+            # DEF EFFとTO(Turnover Ratio)の場合だけ昇順ソート
+            sort_ascending = True if stat_short in ('DEF EFF', 'TO') else False
 
             # データ準備
             df_merged = pd.merge(
@@ -359,7 +361,8 @@ def generate_stat_pages(df_s1, df_s2, env):
                 suffixes=('_s1', '_s2')
             ).set_index('Team').sort_values(by=f"{stat_short}_s2", ascending=sort_ascending)
             
-            # グラフ生成
+            # (以降のグラフ生成、HTML生成は変更なし)
+            # ...
             y = np.arange(len(df_merged.index))
             height = 0.4
             fig, ax = plt.subplots(figsize=(10, 14))
