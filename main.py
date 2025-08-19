@@ -5,8 +5,16 @@ import pandas as pd
 import jinja2
 import matplotlib.pyplot as plt
 import numpy as np
-import re  # ★★★ この行を追加 ★★★
+import re
 import json
+import unicodedata
+
+def normalize_name(name):
+    """選手名から特殊文字を除去して正規化する"""
+    if name is None or not isinstance(name, str):
+        return ""
+    return "".join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
+
 
 # 日本語フォントがない環境でもエラーが出ないように、デフォルトのsans-serifを指定
 plt.rcParams['font.family'] = 'sans-serif'
@@ -78,27 +86,19 @@ TEAM_NAME_MAP = {
 }
 
 # ★★★ 選手ページ生成関数を追加 ★★★
-def generate_player_pages(env, scoring_timeline_data):
+# ★★★ ここから修正 ★★★
+def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw):
     """選手比較ページを生成する"""
     print("--- 選手ページの生成開始 ---")
-    try:
-        df_s1 = pd.read_csv("player_stats_2023-24.csv")
-        df_s2 = pd.read_csv("player_stats_2024-25.csv")
-    except FileNotFoundError:
-        print("警告: 選手データ(CSV)が見つかりません。get_player_data.py を実行してください。")
-        return
+    
+    # 関数に渡されたデータフレームを使用するため、ここでのCSV読み込みは不要
+    # try:
+    #     df_s1 = pd.read_csv("player_stats_2023-24.csv")
+    #     df_s2 = pd.read_csv("player_stats_2024-25.csv")
+    # except FileNotFoundError:
+    # ...
 
-    team_abbr_map = {
-        'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 'CHI': 'Chicago Bulls',
-        'CLE': 'Cleveland Cavaliers', 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons', 'GS': 'Golden State Warriors',
-        'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers', 'LAC': 'LA Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies',
-        'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves', 'NO': 'New Orleans Pelicans', 'NY': 'New York Knicks',
-        'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
-        'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards'
-    }
-    df_s2['full_team_name'] = df_s2['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[0].strip().upper()))
-
-    df_merged = pd.merge(df_s2, df_s1, on='Player', how='left', suffixes=('_s2', '_s1'))
+    df_merged = pd.merge(df_s2_raw, df_s1_raw, on='Player', how='left', suffixes=('_s2', '_s1'))
     template = env.get_template('player_comparison_template.html')
     stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
     
@@ -150,8 +150,6 @@ def generate_player_pages(env, scoring_timeline_data):
                     fill_value=0
                 )
                 
-                # ★★★ この部分がエラーを解決する重要なコードです ★★★
-                # pivot_tableで生成された階層的な列名を単純な文字列に変換
                 attempts_pivot.columns = ['_'.join(map(str, col)) for col in attempts_pivot.columns]
                 attempts_agg = pd.merge(attempts_agg, attempts_pivot, on='absolute_minute', how='left').fillna(0)
                 
@@ -463,163 +461,10 @@ def generate_stat_pages(df_s1, df_s2, env):
             print(f"エラー: {stat_full} のページ生成中に問題が発生しました: {e}")
     print("--- 指標別ランキングページの生成完了 ---")
 
-# def generate_player_pages(env, scoring_timeline_data):
-#     """選手比較ページを生成する"""
-#     print("--- 選手ページの生成開始 ---")
-#     try:
-#         df_s1 = pd.read_csv("player_stats_2023-24.csv")
-#         df_s2 = pd.read_csv("player_stats_2024-25.csv")
-#     except FileNotFoundError:
-#         print("警告: 選手データ(CSV)が見つかりません。get_player_data.py を実行してください。")
-#         return
-
-#     # チーム名の正式名称をマッピングに追加
-#     team_abbr_map = {
-#         'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 'CHI': 'Chicago Bulls',
-#         'CLE': 'Cleveland Cavaliers', 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons', 'GS': 'Golden State Warriors',
-#         'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers', 'LAC': 'LA Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies',
-#         'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves', 'NO': 'New Orleans Pelicans', 'NY': 'New York Knicks',
-#         'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
-#         'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards'
-#     }
-#     df_s2['full_team_name'] = df_s2['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[0].strip().upper()))
-
-#     df_merged = pd.merge(df_s2, df_s1, on='Player', how='left', suffixes=('_s2', '_s1'))
-#     template = env.get_template('player_comparison_template.html')
-#     stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
-    
-#     stat_pages_footer, all_teams_structured_footer = get_footer_data('../teams/', '../stats/')
-
-#     for index, player_data in df_merged.iterrows():
-#         player_name = player_data.get('Player', 'Unknown')
-#         try:
-#             player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
-
-#             stats_s2_table = pd.DataFrame(player_data.filter(like='_s2')).rename(index=lambda x: x.replace('_s2', ''))
-#             stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
-            
-#             graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
-#             graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
-#             graph_stats_s2 = graph_stats_s2_series.fillna(0).values
-#             graph_stats_s1 = graph_stats_s1_series.fillna(0).values
-
-#             x = np.arange(len(stats_to_compare))
-#             width = 0.35
-#             fig, ax = plt.subplots(figsize=(10, 6))
-#             ax.bar(x - width/2, graph_stats_s1, width, label='2023-24')
-#             ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
-#             ax.set_ylabel('Value')
-#             ax.set_title(f'Key Stats Comparison: {player_name}')
-#             ax.set_xticks(x)
-#             ax.set_xticklabels(stats_to_compare)
-#             ax.legend()
-#             fig.tight_layout()
-#             plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
-#             plt.close()
-            
-#             # 2シーズン分、2種類のグラフ（合計4つ）を作成
-#             for season_str_short in ["23-24", "24-25"]:
-#                 season_str_long = f"20{season_str_short}"
-#                 player_timeline = scoring_timeline_data[
-#                     (scoring_timeline_data['Player'] == player_name) & 
-#                     (scoring_timeline_data['Season'] == season_str_long)
-#                 ]
-
-#                 if player_timeline.empty:
-#                     continue
-
-#                 # --- グラフ1: ゴール機会（成功・失敗の内訳）---
-#                 attempts_agg = pd.DataFrame({'absolute_minute': range(48)})
-#                 attempts_pivot = player_timeline.pivot_table(
-#                     index='absolute_minute', 
-#                     columns=['SHOT_TYPE', 'MADE_FLAG'], 
-#                     aggfunc='size', 
-#                     fill_value=0
-#                 )
-#                 attempts_agg = pd.merge(attempts_agg, attempts_pivot, on='absolute_minute', how='left').fillna(0)
-#                 # pivot_tableの列名はタプルになるため、アクセスしやすいように文字列に変換
-#                 attempts_agg.columns = ['_'.join(map(str, col)) if isinstance(col, tuple) else col for col in attempts_agg.columns]
-
-#                 fig, ax = plt.subplots(figsize=(15, 7))
-                
-#                 # 積み上げグラフの底辺を管理
-#                 bottom = np.zeros(48)
-                
-#                 # 失敗したシュートを描画
-#                 miss_3pt = attempts_agg.get('3PT_0', 0)
-#                 miss_2pt = attempts_agg.get('2PT_0', 0)
-#                 miss_ft = attempts_agg.get('FT_0', 0)
-#                 ax.bar(attempts_agg['absolute_minute'], miss_3pt, bottom=bottom, color='#aec7e8', label='3PT Miss')
-#                 bottom += miss_3pt
-#                 ax.bar(attempts_agg['absolute_minute'], miss_2pt, bottom=bottom, color='#ffbb78', label='2PT Miss')
-#                 bottom += miss_2pt
-#                 ax.bar(attempts_agg['absolute_minute'], miss_ft, bottom=bottom, color='#ff9896', label='FT Miss')
-#                 bottom += miss_ft
-                
-#                 # 成功したシュートを描画
-#                 made_3pt = attempts_agg.get('3PT_1', 0)
-#                 made_2pt = attempts_agg.get('2PT_1', 0)
-#                 made_ft = attempts_agg.get('FT_1', 0)
-#                 ax.bar(attempts_agg['absolute_minute'], made_3pt, bottom=bottom, color='#1f77b4', label='3PT Made')
-#                 bottom += made_3pt
-#                 ax.bar(attempts_agg['absolute_minute'], made_2pt, bottom=bottom, color='#ff7f0e', label='2PT Made')
-#                 bottom += made_2pt
-#                 ax.bar(attempts_agg['absolute_minute'], made_ft, bottom=bottom, color='#d62728', label='FT Made')
-
-#                 ax.set_title(f'{player_name} - Shot Attempts (Made/Miss) Timeline ({season_str_long})')
-#                 ax.set_xlabel('Game Minute'); ax.set_ylabel('Number of Attempts')
-#                 ax.set_xticks([0, 12, 24, 36, 47]); ax.grid(axis='y', linestyle='--', alpha=0.7); ax.legend()
-#                 plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg")
-#                 plt.close()
-
-#                 # --- グラフ2: 得点 ---
-#                 points_agg = pd.DataFrame({'absolute_minute': range(48)})
-#                 made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1]
-#                 if not made_shots.empty:
-#                     point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
-#                     made_shots = made_shots.copy()
-#                     made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
-#                     points_by_type = made_shots.groupby(['absolute_minute', 'SHOT_TYPE'])['POINTS'].sum().unstack(fill_value=0)
-#                     points_agg = pd.merge(points_agg, points_by_type, on='absolute_minute', how='left').fillna(0)
-
-#                 fig, ax = plt.subplots(figsize=(15, 7))
-#                 ax.bar(points_agg['absolute_minute'], points_agg.get('3PT', 0), color='#1f77b4', label='3-Pointers')
-#                 ax.bar(points_agg['absolute_minute'], points_agg.get('2PT', 0), bottom=points_agg.get('3PT', 0), color='#ff7f0e', label='2-Pointers')
-#                 ax.bar(points_agg['absolute_minute'], points_agg.get('FT', 0), bottom=points_agg.get('3PT', 0) + points_agg.get('2PT', 0), color='#2ca02c', label='Free Throws')
-#                 ax.set_title(f'{player_name} - Points Scored Timeline ({season_str_long})')
-#                 ax.set_xlabel('Game Minute'); ax.set_ylabel('Points Scored')
-#                 ax.set_xticks([0, 12, 24, 36, 47]); ax.grid(axis='y', linestyle='--', alpha=0.7); ax.legend()
-#                 plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg")
-#                 plt.close()
-            
-#             team_name = player_data.get('full_team_name', '')
-#             team_url = ""
-#             if team_name:
-#                 team_url = f"../teams/comparison_{team_name.replace(' ', '_')}.html"
-
-#             render_data = {
-#                 'player_name': player_name,
-#                 'player_filename': player_filename,
-#                 'player_info': stats_s2_table.T.to_dict('records')[0],
-#                 'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'),
-#                 'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'),
-#                 'stat_pages': stat_pages_footer,
-#                 'all_teams_structured': all_teams_structured_footer,
-#                 'team_name': team_name,
-#                 'team_url': team_url
-#             }
-#             output_path = f"output/players/{player_filename}.html"
-#             with open(output_path, "w", encoding="utf-8") as f:
-#                 f.write(template.render(render_data))
-#         except Exception as e:
-#             print(f"警告: {player_name} のページ生成中にエラー: {e}")
-#     print("--- 選手ページの生成完了 ---")
-
 # --- メイン処理 ---
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     
-    # --- 1. ディレクトリ構造の確認と作成 ---
     os.makedirs("output/teams", exist_ok=True)
     os.makedirs("output/images", exist_ok=True)
     os.makedirs("output/stats", exist_ok=True)
@@ -629,16 +474,14 @@ if __name__ == "__main__":
     os.makedirs("output/images/players", exist_ok=True)
     print("出力ディレクトリの準備が完了しました。")
 
-    # --- 2. データファイルの読み込み ---
     try:
         df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv")
         df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
-        print("CSVファイルの読み込みに成功しました。")
+        print("チームCSVファイルの読み込みに成功しました。")
 
         df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP)
         df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
         print("チーム名を正式名称に統一しました。")
-
 
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']
         df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
@@ -650,14 +493,21 @@ if __name__ == "__main__":
         print("2024-25シーズンのリーグ内ランクを計算しました。")
 
     except FileNotFoundError as e:
-        print(f"エラー: データファイルが見つかりません。{e}")
+        print(f"エラー: チームデータファイルが見つかりません。{e}")
         sys.exit(1)
     except KeyError as e:
-        print(f"エラー: CSVファイルに必要な列が存在しません。{e}")
+        print(f"エラー: チームCSVファイルに必要な列が存在しません。{e}")
         sys.exit(1)
     
+    df_players_24_25 = None
+    df_players_23_24 = None
     try:
-        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
+        df_players_24_25_raw = pd.read_csv("player_stats_2024-25.csv")
+        df_players_24_25_raw['Player'] = df_players_24_25_raw['Player'].apply(normalize_name)
+        
+        df_players_23_24_raw = pd.read_csv("player_stats_2023-24.csv")
+        df_players_23_24_raw['Player'] = df_players_23_24_raw['Player'].apply(normalize_name)
+        
         team_abbr_map = {
             'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 'CHI': 'Chicago Bulls',
             'CLE': 'Cleveland Cavaliers', 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons', 'GS': 'Golden State Warriors',
@@ -666,10 +516,14 @@ if __name__ == "__main__":
             'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
             'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards'
         }
-        df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[-1].strip().upper()))
+        
+        df_players_24_25_raw['full_team_name'] = df_players_24_25_raw['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[0].strip().upper()))
+        
+        df_players_24_25 = df_players_24_25_raw
+        df_players_23_24 = df_players_23_24_raw
+        
     except FileNotFoundError:
-        df_players_24_25 = None
-        print("警告: 選手データが見つかりませんでした。チームページの選手一覧は表示されません。")
+        print("警告: player_stats_2024-25.csv が見つかりませんでした。")
         
     try:
         with open('youtube_videos.json', 'r') as f:
@@ -677,28 +531,23 @@ if __name__ == "__main__":
         print("youtube_videos.json の読み込みに成功しました。")
     except FileNotFoundError:
         video_data = {}
-        print("警告: youtube_videos.jsonが見つかりません。動画は表示されません。")
+        print("警告: youtube_videos.jsonが見つかりません。")
 
-    # ★★★ ここから追加 ★★★
     try:
         scoring_timeline_data = pd.read_csv('player_scoring_timeline.csv')
+        scoring_timeline_data['Player'] = scoring_timeline_data['Player'].apply(normalize_name)
     except FileNotFoundError:
-        scoring_timeline_data = pd.DataFrame() # ファイルがなくてもエラーにしない
-        print("警告: player_scoring_timeline.csvが見つかりません。得点タイムラインは表示されません。")
-    # ★★★ ここまで追加 ★★★
+        scoring_timeline_data = pd.DataFrame()
+        print("警告: player_scoring_timeline.csvが見つかりません。")
 
-    # --- 3. Jinja2テンプレートエンジン初期化 ---
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     print("テンプレートエンジンの準備が完了しました。")
 
-    # --- 4. 各種HTMLページの生成 ---
     generate_main_index(env)
     generate_glossary_page(env)
     generate_stat_pages(df_23_24, df_24_25, env)
-    # ★★★ ここを修正 ★★★
     generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, video_data, env)
-    generate_player_pages(env, scoring_timeline_data)
-
+    generate_player_pages(env, scoring_timeline_data, df_players_23_24, df_players_24_25)
     
     print("\n--- すべての処理が完了しました ---")
