@@ -666,7 +666,7 @@ if __name__ == "__main__":
             'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
             'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards'
         }
-        df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[0].strip().upper()))
+        df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[-1].strip().upper()))
     except FileNotFoundError:
         df_players_24_25 = None
         print("警告: 選手データが見つかりませんでした。チームページの選手一覧は表示されません。")
