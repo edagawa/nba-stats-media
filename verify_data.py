@@ -61,9 +61,7 @@ def verify_player_data(player_name, season):
 if __name__ == "__main__":
     # 今回処理した8人のリスト
     players_to_check = [
-        "Amen Thompson", "Jrue Holiday", "Kentavious Caldwell-Pope",
-        "Draymond Green", "Wendell Carter Jr.", "Scotty Pippen Jr.",
-        "Evan Mobley", "Brandin Podziemski"
+        "ALuka Doncic", "Nikola Jokic", "Nikola Vucevic"
     ]
     
     # 8人それぞれについて、2シーズン分のデータ検証を実行

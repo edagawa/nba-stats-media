@@ -9,12 +9,18 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import unicodedata
+import re  # ★★★ この行を追加 ★★★
+
+def normalize_name(name):
+    """選手名から特殊文字や接尾辞を除去して正規化する"""
+    if not isinstance(name, str):
+        return ""
+    name = "".join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
+    name = re.sub(r'\s+(Jr|Sr|II|III|IV|V)\.?$', '', name, flags=re.IGNORECASE)
+    return name.strip()
 
 def fetch_player_stats(year, url):
-    """
-    指定されたシーズンの選手統計データをESPNから取得し、CSVファイルに保存する。
-    「Show More」ボタンを繰り返しクリックして全選手データを読み込む。
-    """
     season_str = f"{year-1}-{str(year)[-2:]}"
     print(f"\n--- {season_str} シーズンの選手データを取得しています ---")
     print(f"URL: {url}")
@@ -49,20 +55,15 @@ def fetch_player_stats(year, url):
         
         print("ページの全データ読み込みと解析が完了しました。")
 
-        # ページ内の全テーブルを取得
         all_tables = pd.read_html(StringIO(html), flavor='html5lib')
         
-        # 選手名とスタッツは別々のテーブルになっている
-        player_info_df = all_tables[0] # 名前、チームなど
-        player_stats_df = all_tables[1] # GP, PTSなど
+        player_info_df = all_tables[0]
+        player_stats_df = all_tables[1]
 
-        # 選手名とチームを抽出
         player_names = [a.text for a in soup.select('a.AnchorLink[data-player-uid]')]
         player_teams = [span.text for span in soup.select('span.pl2.ns10.athleteCell__teamAbbrev')]
 
-        # データフレームの行数と一致するか確認
         if len(player_names) != len(player_info_df):
-            # ヘッダー行(RK, Name)を考慮して調整
             player_info_df = player_info_df.iloc[1:]
         
         if len(player_names) != len(player_info_df):
@@ -71,15 +72,15 @@ def fetch_player_stats(year, url):
         player_info_df['Player'] = player_names
         player_info_df['TeamAbbrev'] = player_teams
         
-        # 不要な列を削除
         player_info_df = player_info_df[['Player', 'TeamAbbrev']]
-        player_stats_df = player_stats_df.drop(player_stats_df.columns[0], axis=1) # 最初の空の列を削除
+        player_stats_df = player_stats_df.drop(player_stats_df.columns[0], axis=1)
 
-        # 2つのデータフレームを横に結合
         final_df = pd.concat([player_info_df.reset_index(drop=True), player_stats_df.reset_index(drop=True)], axis=1)
         
-        # 列名を整える
         final_df.rename(columns={'TeamAbbrev': 'Team'}, inplace=True)
+        
+        # Player列の名前を正規化
+        final_df['Player'] = final_df['Player'].apply(normalize_name)
         
         file_path = f"player_stats_{season_str}.csv"
         final_df.to_csv(file_path, index=False)
@@ -92,7 +93,5 @@ def fetch_player_stats(year, url):
             driver.quit()
 
 if __name__ == "__main__":
-    # 2023-24シーズン
     fetch_player_stats(2024, "https://www.espn.com/nba/stats/player/_/season/2024/seasontype/2")
-    # 2024-25シーズン
     fetch_player_stats(2025, "https://www.espn.com/nba/stats/player")

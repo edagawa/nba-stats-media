@@ -5,55 +5,48 @@ import pandas as pd
 import time
 import re
 import os
+import unicodedata
+
+
+def normalize_name(name):
+    """選手名から特殊文字や接尾辞を除去して正規化する"""
+    if not isinstance(name, str):
+        return ""
+    name = "".join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
+    name = re.sub(r'\s+(Jr|Sr|II|III|IV|V)\.?$', '', name, flags=re.IGNORECASE)
+    return name.strip()
 
 # --- 分析対象の選手とシーズンを定義 ---
+# キー（選手名）の特殊文字をなくし、正規化しています
 PLAYERS_TO_ANALYZE = {
-    # "Luka Dončić": ["2023-24", "2024-25"], "Cade Cunningham": ["2023-24", "2024-25"],
-    # "Jamal Murray": ["2023-24", "2024-25"], "LeBron James": ["2023-24", "2024-25"],
-    # "Jayson Tatum": ["2023-24", "2024-25"], "Nikola Jokić": ["2023-24", "2024-25"],
-    # "Fred VanVleet": ["2023-24", "2024-25"], "James Harden": ["2023-24", "2024-25"],
-    # "Paolo Banchero": ["2023-24", "2024-25"], "Mikal Bridges": ["2023-24", "2024-25"],
-    # "Austin Reaves": ["2023-24", "2024-25"], "OG Anunoby": ["2023-24", "2024-25"],
-    # "Anthony Edwards": ["2023-24", "2024-25"], "Franz Wagner": ["2023-24", "2024-25"],
-    # "Christian Braun": ["2023-24", "2024-25"], "Tobias Harris": ["2023-24", "2024-25"],
-    # "Bam Adebayo": ["2023-24", "2024-25"], "Kawhi Leonard": ["2023-24", "2024-25"],
-    # "Jalen Brunson": ["2023-24", "2024-25"], "Derrick White": ["2023-24", "2024-25"],
-    # "Giannis Antetokounmpo": ["2023-24", "2024-25"], "Aaron Gordon": ["2023-24", "2024-25"],
-    # "Shai Gilgeous-Alexander": ["2023-24", "2024-25"], "Alperen Sengun": ["2023-24", "2024-25"],
-    # "Ivica Zubac": ["2023-24", "2024-25"], "Jaylen Brown": ["2023-24", "2024-25"],
-    # "Rui Hachimura": ["2023-24", "2024-25"], "Jimmy Butler": ["2023-24", "2024-25"],
-    # "Tyler Herro": ["2023-24", "2024-25"], "Josh Hart": ["2023-24", "2024-25"],
-    # "Kevin Durant": ["2023-24", "2024-25"], "Devin Booker": ["2023-24", "2024-25"],
-    # "Damian Lillard": ["2023-24", "2024-25"], "Stephen Curry": ["2023-24", "2024-25"],
-    # "Trae Young": ["2023-24", "2024-25"], "Donovan Mitchell": ["2023-24", "2024-25"],
-    # "De'Aaron Fox": ["2023-24", "2024-25"], "Zach LaVine": ["2023-24", "2024-25"],
-    # "DeMar DeRozan": ["2023-24", "2024-25"], "RJ Barrett": ["2023-24", "2024-25"],
-    # "Jalen Green": ["2023-24", "2024-25"], "Darius Garland": ["2023-24", "2024-25"],
-    # "Jordan Poole": ["2023-24", "2024-25"], "Coby White": ["2023-24", "2024-25"],
-    # "Miles Bridges": ["2023-24", "2024-25"], "Scottie Barnes": ["2023-24", "2024-25"],
-    # "Anfernee Simons": ["2023-24", "2024-25"], "Domantas Sabonis": ["2023-24", "2024-25"],
-    # "Shaedon Sharpe": ["2023-24", "2024-25"], "Nikola Vučević": ["2023-24", "2024-25"],
-    # "Collin Sexton": ["2023-24", "2024-25"], "Michael Porter Jr.": ["2023-24", "2024-25"],
-    # "Andrew Wiggins": ["2023-24", "2024-25"], "Buddy Hield": ["2023-24", "2024-25"],
-    # "Moses Moody": ["2023-24", "2024-25"],
-    # "Julius Randle": ["2023-24", "2024-25"], "Davion Mitchell": ["2023-24", "2024-25"],
-    # "Karl-Anthony Towns": ["2023-24", "2024-25"], "Desmond Bane": ["2023-24", "2024-25"],
-    # "Jalen Williams": ["2023-24", "2024-25"], "Jaren Jackson Jr.": ["2023-24", "2024-25"],
-    # "Gary Trent Jr.": ["2023-24", "2024-25"], "Dorian Finney-Smith": ["2023-24", "2024-25"],
-    # "Norman Powell": ["2023-24", "2024-25"], "Jalen Duren": ["2023-24", "2024-25"],
-    # "Tyrese Haliburton": ["2023-24", "2024-25"], "Pascal Siakam": ["2023-24", "2024-25"],
-    # "Andrew Nembhard": ["2023-24", "2024-25"], "Jaden McDaniels": ["2023-24", "2024-25"],
-    "Amen Thompson": ["2023-24", "2024-25"], "Jrue Holiday": ["2023-24", "2024-25"],
-    "Kentavious Caldwell-Pope": ["2023-24", "2024-25"], "Draymond Green": ["2023-24", "2024-25"],
-    "Wendell Carter Jr.": ["2023-24", "2024-25"], "Scotty Pippen Jr.": ["2023-24", "2024-25"],
-    "Evan Mobley": ["2023-24", "2024-25"], "Brandin Podziemski": ["2023-24", "2024-25"]
+    "Jaren Jackson": ["2023-24", "2024-25"],     # 元の名前: Jaren Jackson Jr.
+    "Gary Trent": ["2023-24", "2024-25"],        # 元の名前: Gary Trent Jr.
+    "Wendell Carter": ["2023-24", "2024-25"],    # 元の名前: Wendell Carter Jr.
+    "Scotty Pippen": ["2023-24", "2024-25"],     # 元の名前: Scotty Pippen Jr.
+    "Michael Porter": ["2023-24", "2024-25"],    # 元の名前: Michael Porter Jr.
+    "Jimmy Butler": ["2023-24", "2024-25"],      # 元の名前: Jimmy Butler III
+    "Trey Murphy": ["2023-24", "2024-25"],       # 元の名前: Trey Murphy III
+    "Robert Williams": ["2023-24", "2024-25"],   # 元の名前: Robert Williams III
+    "Trey Jemison": ["2023-24", "2024-25"],      # 元の名前: Trey Jemison III
+    "Kevin Porter": ["2023-24", "2024-25"],      # 元の名前: Kevin Porter Jr.
+    "Craig Porter": ["2023-24", "2024-25"],      # 元の名前: Craig Porter Jr.
+    "Jeff Dowtin": ["2023-24", "2024-25"],       # 元の名前: Jeff Dowtin Jr.
+    "Vince Williams": ["2023-24", "2024-25"],    # 元の名前: Vince Williams Jr.
+    "Wendell Moore": ["2023-24", "2024-25"],     # 元の名前: Wendell Moore Jr.
+    "Kevin McCullar": ["2023-24", "2024-25"],    # 元の名前: Kevin McCullar Jr.
+    "Andre Jackson": ["2023-24", "2024-25"],     # 元の名前: Andre Jackson Jr.
+    "Jaime Jaquez": ["2023-24", "2024-25"],      # 元の名前: Jaime Jaquez Jr.
+    "Derrick Jones": ["2023-24", "2024-25"],     # 元の名前: Derrick Jones Jr.
+    "Jabari Smith": ["2023-24", "2024-25"],      # 元の名前: Jabari Smith Jr.
+    "Ron Harper": ["2023-24", "2024-25"],        # 元の名前: Ron Harper Jr.
+    "Keion Brooks": ["2023-24", "2024-25"],      # 元の名前: Keion Brooks Jr.
+    "Tim Hardaway": ["2023-24", "2024-25"],      # 元の名前: Tim Hardaway Jr.
+    "TyTy Washington": ["2023-24", "2024-25"],   # 元の名前: TyTy Washington Jr.
+    "Patrick Baldwin": ["2023-24", "2024-25"],   # 元の名前: Patrick Baldwin Jr.
+    "Ronald Holland": ["2023-24", "2024-25"],    # 元の名前: Ronald Holland II
+    "Gary Payton": ["2023-24", "2024-25"],       # 元の名前: Gary Payton II
+    "Dereck Lively": ["2023-24", "2024-25"],     # 元の名前: Dereck Lively II
 }
-
-# PLAYERS_TO_ANALYZE = {
-#     "Jayson Tatum": ["2023-24", "2024-25"],
-#     "Mikal Bridges": ["2023-24", "2024-25"],
-#     # 他の50人の選手は一時的にコメントアウトするか削除
-# }
 
 def get_scoring_data():
     output_csv_path = 'player_scoring_timeline.csv'
@@ -74,7 +67,10 @@ def get_scoring_data():
     total_players = len(players_to_analyze)
     
     for i, player_name in enumerate(players_to_analyze):
-        if player_name in processed_players:
+        
+        normalized_player_name = normalize_name(player_name)
+        
+        if normalized_player_name in processed_players:
             print(f"\n--- [{i+1}/{total_players}] {player_name} は処理済みのためスキップします ---")
             continue
 
@@ -131,7 +127,7 @@ def get_scoring_data():
                     if pbp_df is None:
                         continue
                     
-                    pbp_df['Game_ID'] = game_id # Game_ID列を追加
+                    pbp_df['Game_ID'] = game_id
                     shot_plays = pbp_df[
                         (pbp_df['EVENTMSGTYPE'].isin([1, 2, 3])) & 
                         (pbp_df['PLAYER1_ID'] == player_id)
@@ -163,7 +159,7 @@ def get_scoring_data():
                 
                 season_df['absolute_minute'] = season_df.apply(calculate_absolute_minute, axis=1)
                 
-                season_df['Player'] = player_name
+                season_df['Player'] = normalize_name(player_name)
                 season_df['Season'] = season
                 
                 player_all_seasons_df = pd.concat([player_all_seasons_df, season_df])
@@ -172,7 +168,6 @@ def get_scoring_data():
                 print(f"エラー: {player_name} ({season}) の処理中に問題が発生: {e}")
 
         if not player_all_seasons_df.empty:
-            # ★★★ ここを修正 ★★★
             output_df = player_all_seasons_df[['Player', 'Season', 'Game_ID', 'absolute_minute', 'SHOT_TYPE', 'MADE_FLAG']]
             file_exists = os.path.exists(output_csv_path) and os.path.getsize(output_csv_path) > 0
             output_df.to_csv(output_csv_path, mode='a', header=not file_exists, index=False)
