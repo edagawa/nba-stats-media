@@ -25,9 +25,10 @@
                     <h3>選手情報 (2024-25)</h3>
                     <ul>
                         <li><strong>チーム:</strong> {{ player_info.Team | default('N/A') }}</li>
-                        </ul>
+                    </ul>
                 </div>
             </section>
+
             <h2>シーズン比較: 2023-24 vs 2024-25</h2>
             <section class="comparison-graph">
                 <h3>主要指標の変化</h3>
@@ -36,7 +37,29 @@
                 </figure>
             </section>
             <div class="seasons-container">
+                <div class="season-card">
+                    <h3>2023-24シーズン</h3>
+                    {{ stats_s1|safe }}
                 </div>
+                <div class="season-card">
+                    <h3>2024-25シーズン</h3>
+                    {{ stats_s2|safe }}
+                </div>
+            </div>
+
+            <section class="timeline-graph">
+                <h2>時間帯別得点パターン (2024-25)</h2>
+                <figure>
+                    <img src="../images/players/timeline_points_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 得点タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
+                </figure>
+            </section>
+
+            <section class="timeline-graph">
+                <h2>時間帯別シュート試投（成功／失敗） (2024-25)</h2>
+                <figure>
+                    <img src="../images/players/timeline_attempts_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 シュート機会タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
+                </figure>
+            </section>
 
             <section class="timeline-graph">
                 <h2>時間帯別得点パターン (2023-24)</h2>
@@ -49,20 +72,6 @@
                 <h2>時間帯別シュート試投（成功／失敗） (2023-24)</h2>
                 <figure>
                     <img src="../images/players/timeline_attempts_23-24_{{ player_filename }}.svg" alt="{{ player_name }} 2023-24 シュート機会タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
-                </figure>
-            </section>
-            
-            <section class="timeline-graph">
-                <h2>時間帯別得点パターン (2024-25)</h2>
-                <figure>
-                    <img src="../images/players/timeline_points_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 得点タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
-                </figure>
-            </section>
-
-            <section class="timeline-graph">
-                <h2>時間帯別シュート試投（成功／失敗） (2024-25)</h2>
-                <figure>
-                    <img src="../images/players/timeline_attempts_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 シュート機会タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
                 </figure>
             </section>
             </main>
