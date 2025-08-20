@@ -11,7 +11,6 @@ import unicodedata
 
 # --- ヘルパー関数: 名前の正規化 ---
 def normalize_name(name):
-    """選手名から特殊文字や接尾辞を除去して正規化する"""
     if not isinstance(name, str):
         return ""
     name = "".join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
@@ -67,12 +66,7 @@ def generate_main_index(env):
     print("--- トップページの生成開始 ---")
     template = env.get_template('index_template.html')
     stat_pages, all_teams_structured = get_footer_data('./teams/', './stats/')
-    render_data = {
-        'season_string': '2024-25 & 2023-24 シーズン比較',
-        'stat_pages': stat_pages,
-        'all_teams_structured': all_teams_structured,
-        'glossary_url': './glossary.html'  # ★★★ 追加 ★★★
-    }
+    render_data = { 'season_string': '2024-25 & 2023-24 シーズン比較', 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured, 'glossary_url': './glossary.html' }
     with open("output/index.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
     print("--- トップページの生成完了 ---")
 
@@ -81,16 +75,12 @@ def generate_glossary_page(env):
     template = env.get_template('glossary_template.html')
     glossary_items = [ {'term': 'Pace', 'description': '1試合あたり48分間のポゼッション（攻撃回数）の推定値。'}, {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'}, {'term': 'Defensive Efficiency (DEF EFF)', 'description': '100ポゼッションあたりの失点。'}, {'term': 'Net Rating (NET EFF)', 'description': 'Offensive EfficiencyとDefensive Efficiencyの差。100ポゼッションあたりの得失点差を示す。'}, {'term': 'True Shooting % (TS%)', 'description': 'フィールドゴール、3ポイント、フリースローを総合的に評価したシュート効率。'}, {'term': 'Assist Ratio (AST)', 'description': 'チームのフィールドゴール成功のうち、アシストが占める割合。'}, {'term': 'Turnover Ratio (TO)', 'description': '100ポゼッションあたりのターンオーバー数。'}, {'term': 'Off Rebound Rate (ORR)', 'description': 'オフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}, {'term': 'Def Rebound Rate (DRR)', 'description': 'ディフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}, ]
     stat_pages, all_teams_structured = get_footer_data('./teams/', './stats/')
-    render_data = {
-        'glossary_items': glossary_items,
-        'stat_pages': stat_pages,
-        'all_teams_structured': all_teams_structured,
-        'glossary_url': './glossary.html'  # ★★★ 追加 ★★★
-    }
+    render_data = { 'glossary_items': glossary_items, 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured, 'glossary_url': './glossary.html' }
     with open("output/glossary.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
     print("--- 指標解説ページの生成完了 ---")
 
-def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env):
+# ★★★ ここを修正 ★★★
+def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_team_map):
     print("--- チーム別比較ページの生成開始 ---")
     df_s1_indexed = df_s1.set_index('Team')
     df_s2_indexed = df_s2.set_index('Team')
@@ -114,21 +104,13 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env):
             summary = generate_team_summary(stats1, stats2)
             player_list = []
             if df_players is not None and player_team_map:
-                # ★★★ ここから修正 ★★★
-                # player_team_mapを使って、そのチームの選手をリストアップ
                 for player_name, player_team in player_team_map.items():
                     if player_team == team:
                         player_filename_p = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
                         player_list.append({'name': player_name, 'url': f"../players/{player_filename_p}.html"})
-                # ★★★ ここまで修正 ★★★
-                team_roster = df_players[df_players['full_team_name'] == team]
-                for _, player in team_roster.iterrows():
-                    player_name = player['Player']
-                    player_filename_p = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
-                    player_list.append({'name': player_name, 'url': f"../players/{player_filename_p}.html"})
             video_id = video_data.get(team)
             video_embed_url = f"https://www.youtube.com/embed/{video_id}" if video_id else None
-            render_data = { 'team_name': team, 'image_filename': image_filename, 'stats_s1': stats1.to_frame(name='Value').to_html(), 'stats_s2': stats2.to_frame(name='Value').to_html(), 'details': TEAM_DETAILS.get(team, {}), 'all_teams_structured': all_teams_structured_footer, 'stat_pages': stat_pages_footer, 'summary_text': summary, 'player_list': player_list, 'video_embed_url': video_embed_url, 'glossary_url': '../glossary.html'}
+            render_data = { 'team_name': team, 'image_filename': image_filename, 'stats_s1': stats1.to_frame(name='Value').to_html(), 'stats_s2': stats2.to_frame(name='Value').to_html(), 'details': TEAM_DETAILS.get(team, {}), 'all_teams_structured': all_teams_structured_footer, 'stat_pages': stat_pages_footer, 'summary_text': summary, 'player_list': player_list, 'video_embed_url': video_embed_url, 'glossary_url': '../glossary.html' }
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e:
@@ -156,36 +138,30 @@ def generate_stat_pages(df_s1, df_s2, env):
             print(f"エラー: {stat_full} のページ生成中に問題が発生しました: {e}")
     print("--- 指標別ランキングページの生成完了 ---")
 
-def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw):
+def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map):
     print("--- 選手ページの生成開始 ---")
     if df_s1_raw is None or df_s2_raw is None:
         print("警告: 選手スタッツデータが不足しているため、選手ページを生成できません。")
         return
         
-    # ★★★ ここに generate_player_comment 関数を定義 ★★★
     def generate_player_comment(player_name, season_str_long, player_season_timeline):
-        if player_season_timeline.empty:
-            return f"{player_name}選手の{season_str_long}シーズンの詳細な得点データはありません。"
+        if player_season_timeline.empty: return f"{player_name}選手の{season_str_long}シーズンの詳細な得点データはありません。"
         point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
         made_shots = player_season_timeline[player_season_timeline['MADE_FLAG'] == 1].copy()
-        if made_shots.empty:
-            return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
+        if made_shots.empty: return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
         made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
         q1_points = made_shots[made_shots['absolute_minute'] < 12]['POINTS'].sum()
         q2_points = made_shots[(made_shots['absolute_minute'] >= 12) & (made_shots['absolute_minute'] < 24)]['POINTS'].sum()
         q3_points = made_shots[(made_shots['absolute_minute'] >= 24) & (made_shots['absolute_minute'] < 36)]['POINTS'].sum()
         q4_points = made_shots[made_shots['absolute_minute'] >= 36]['POINTS'].sum()
         total_points = made_shots['POINTS'].sum()
-        if total_points == 0:
-            return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
+        if total_points == 0: return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
         points_per_quarter = {1: q1_points, 2: q2_points, 3: q3_points, 4: q4_points}
         best_quarter = max(points_per_quarter, key=points_per_quarter.get)
         shot_attempts = player_season_timeline['SHOT_TYPE'].value_counts(normalize=True)
         primary_style = "バランスの取れた攻撃が持ち味"
-        if shot_attempts.get('3PT', 0) > 0.4:
-            primary_style = "3ポイントシュートを多用するプレースタイル"
-        elif shot_attempts.get('2PT', 0) > 0.55:
-            primary_style = "2ポイントエリアでの得点を主体とするプレースタイル"
+        if shot_attempts.get('3PT', 0) > 0.4: primary_style = "3ポイントシュートを多用するプレースタイル"
+        elif shot_attempts.get('2PT', 0) > 0.55: primary_style = "2ポイントエリアでの得点を主体とするプレースタイル"
         comment_parts = []
         if best_quarter == 4 and (q4_points / total_points) > 0.3:
             comment_parts.append(f"{player_name}選手は、試合の勝敗が決まる第4クォーターに最も得点を集中させるクラッチパフォーマーです。")
@@ -217,7 +193,7 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw):
             ax.bar(x - width/2, graph_stats_s1, width, label='2023-24'); ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
             ax.set_ylabel('Value'); ax.set_title(f'Key Stats Comparison: {player_name}'); ax.set_xticks(x); ax.set_xticklabels(stats_to_compare); ax.legend(); fig.tight_layout()
             plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg"); plt.close()
-            team_name = player_data.get('full_team_name', ''); team_url = ""
+            team_name = player_team_map.get(player_name, ''); team_url = ""
             if team_name: team_url = f"../teams/comparison_{team_name.replace(' ', '_')}.html"
             render_data = { 'player_name': player_name, 'player_filename': player_filename, 'player_info': stats_s2_table.T.to_dict('records')[0], 'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'team_name': team_name, 'team_url': team_url }
             for season_str_short in ["23-24", "24-25"]:
@@ -279,25 +255,17 @@ if __name__ == "__main__":
     except KeyError as e:
         print(f"エラー: チームCSVファイルに必要な列が存在しません。{e}"); sys.exit(1)
     df_players_23_24, df_players_24_25 = None, None
-    player_team_map = {} # ★★★ 追加 ★★★
+    player_team_map = {}
     try:
         df_players_23_24 = pd.read_csv("player_stats_2023-24.csv")
         df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
         df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
         df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
-
-        # ★★★ ここから修正 ★★★
-        # 新しいロスターCSVを読み込み、選手名をキーとする辞書を作成
         roster_df = pd.read_csv("player_team_map.csv")
         roster_df['Player'] = roster_df['Player'].apply(normalize_name)
         player_team_map = pd.Series(roster_df.Team.values, index=roster_df.Player).to_dict()
-        # ★★★ ここまで修正 ★★★
-
-        team_abbr_map = { 'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 'CHI': 'Chicago Bulls', 'CLE': 'Cleveland Cavaliers', 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons', 'GS': 'Golden State Warriors', 'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers', 'LAC': 'LA Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies', 'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves', 'NO': 'New Orleans Pelicans', 'NY': 'New York Knicks', 'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers', 'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards' }
-        if df_players_24_25 is not None:
-            df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[0].strip().upper()))
-    except FileNotFoundError:
-        print("警告: 選手データCSVが見つかりませんでした。")
+    except FileNotFoundError as e:
+        print(f"警告: 選手データ関連のCSVが見つかりませんでした。({e})")
     try:
         with open('youtube_videos.json', 'r') as f: video_data = json.load(f)
         print("youtube_videos.json の読み込みに成功しました。")
@@ -314,6 +282,6 @@ if __name__ == "__main__":
     generate_main_index(env)
     generate_glossary_page(env)
     generate_stat_pages(df_23_24, df_24_25, env)
-    generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, video_data, env)
-    generate_player_pages(env, scoring_timeline_data, df_players_23_24, df_players_24_25)
+    generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, video_data, env, player_team_map)
+    generate_player_pages(env, scoring_timeline_data, df_players_23_24, df_players_24_25, player_team_map)
     print("\n--- すべての処理が完了しました ---")
