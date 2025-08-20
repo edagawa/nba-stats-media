@@ -67,7 +67,12 @@ def generate_main_index(env):
     print("--- トップページの生成開始 ---")
     template = env.get_template('index_template.html')
     stat_pages, all_teams_structured = get_footer_data('./teams/', './stats/')
-    render_data = { 'season_string': '2024-25 & 2023-24 シーズン比較', 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured }
+    render_data = {
+        'season_string': '2024-25 & 2023-24 シーズン比較',
+        'stat_pages': stat_pages,
+        'all_teams_structured': all_teams_structured,
+        'glossary_url': './glossary.html'  # ★★★ 追加 ★★★
+    }
     with open("output/index.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
     print("--- トップページの生成完了 ---")
 
@@ -76,7 +81,12 @@ def generate_glossary_page(env):
     template = env.get_template('glossary_template.html')
     glossary_items = [ {'term': 'Pace', 'description': '1試合あたり48分間のポゼッション（攻撃回数）の推定値。'}, {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'}, {'term': 'Defensive Efficiency (DEF EFF)', 'description': '100ポゼッションあたりの失点。'}, {'term': 'Net Rating (NET EFF)', 'description': 'Offensive EfficiencyとDefensive Efficiencyの差。100ポゼッションあたりの得失点差を示す。'}, {'term': 'True Shooting % (TS%)', 'description': 'フィールドゴール、3ポイント、フリースローを総合的に評価したシュート効率。'}, {'term': 'Assist Ratio (AST)', 'description': 'チームのフィールドゴール成功のうち、アシストが占める割合。'}, {'term': 'Turnover Ratio (TO)', 'description': '100ポゼッションあたりのターンオーバー数。'}, {'term': 'Off Rebound Rate (ORR)', 'description': 'オフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}, {'term': 'Def Rebound Rate (DRR)', 'description': 'ディフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}, ]
     stat_pages, all_teams_structured = get_footer_data('./teams/', './stats/')
-    render_data = { 'glossary_items': glossary_items, 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured }
+    render_data = {
+        'glossary_items': glossary_items,
+        'stat_pages': stat_pages,
+        'all_teams_structured': all_teams_structured,
+        'glossary_url': './glossary.html'  # ★★★ 追加 ★★★
+    }
     with open("output/glossary.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
     print("--- 指標解説ページの生成完了 ---")
 
@@ -111,7 +121,7 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env):
                     player_list.append({'name': player_name, 'url': f"../players/{player_filename_p}.html"})
             video_id = video_data.get(team)
             video_embed_url = f"https://www.youtube.com/embed/{video_id}" if video_id else None
-            render_data = { 'team_name': team, 'image_filename': image_filename, 'stats_s1': stats1.to_frame(name='Value').to_html(), 'stats_s2': stats2.to_frame(name='Value').to_html(), 'details': TEAM_DETAILS.get(team, {}), 'all_teams_structured': all_teams_structured_footer, 'stat_pages': stat_pages_footer, 'summary_text': summary, 'player_list': player_list, 'video_embed_url': video_embed_url, }
+            render_data = { 'team_name': team, 'image_filename': image_filename, 'stats_s1': stats1.to_frame(name='Value').to_html(), 'stats_s2': stats2.to_frame(name='Value').to_html(), 'details': TEAM_DETAILS.get(team, {}), 'all_teams_structured': all_teams_structured_footer, 'stat_pages': stat_pages_footer, 'summary_text': summary, 'player_list': player_list, 'video_embed_url': video_embed_url, 'glossary_url': '../glossary.html'}
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e:
@@ -132,7 +142,7 @@ def generate_stat_pages(df_s1, df_s2, env):
             stat_filename = stat_short.replace('%', '_PCT').replace(' ', '_')
             plt.savefig(f"output/images/stat_{stat_filename}.svg", format="svg"); plt.close()
             stat_pages, all_teams_structured = get_footer_data('../teams/', './')
-            render_data = { 'stat_name_jp': stat_full, 'stat_name_en': stat_filename, 'data_table_html': df_merged.rename(columns={f'{stat_short}_s1': '2023-24', f'{stat_short}_s2': '2024-25'}).to_html(), 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured }
+            render_data = { 'stat_name_jp': stat_full, 'stat_name_en': stat_filename, 'data_table_html': df_merged.rename(columns={f'{stat_short}_s1': '2023-24', f'{stat_short}_s2': '2024-25'}).to_html(), 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured, 'glossary_url': '../glossary.html' }
             output_path = f"output/stats/{stat_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e:
