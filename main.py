@@ -113,7 +113,14 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env):
             plt.savefig(f"output/images/comparison_{image_filename}.svg", format="svg"); plt.close()
             summary = generate_team_summary(stats1, stats2)
             player_list = []
-            if df_players is not None:
+            if df_players is not None and player_team_map:
+                # ★★★ ここから修正 ★★★
+                # player_team_mapを使って、そのチームの選手をリストアップ
+                for player_name, player_team in player_team_map.items():
+                    if player_team == team:
+                        player_filename_p = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
+                        player_list.append({'name': player_name, 'url': f"../players/{player_filename_p}.html"})
+                # ★★★ ここまで修正 ★★★
                 team_roster = df_players[df_players['full_team_name'] == team]
                 for _, player in team_roster.iterrows():
                     player_name = player['Player']
@@ -272,11 +279,20 @@ if __name__ == "__main__":
     except KeyError as e:
         print(f"エラー: チームCSVファイルに必要な列が存在しません。{e}"); sys.exit(1)
     df_players_23_24, df_players_24_25 = None, None
+    player_team_map = {} # ★★★ 追加 ★★★
     try:
         df_players_23_24 = pd.read_csv("player_stats_2023-24.csv")
         df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
         df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
         df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
+
+        # ★★★ ここから修正 ★★★
+        # 新しいロスターCSVを読み込み、選手名をキーとする辞書を作成
+        roster_df = pd.read_csv("player_team_map.csv")
+        roster_df['Player'] = roster_df['Player'].apply(normalize_name)
+        player_team_map = pd.Series(roster_df.Team.values, index=roster_df.Player).to_dict()
+        # ★★★ ここまで修正 ★★★
+
         team_abbr_map = { 'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 'CHI': 'Chicago Bulls', 'CLE': 'Cleveland Cavaliers', 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons', 'GS': 'Golden State Warriors', 'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers', 'LAC': 'LA Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies', 'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves', 'NO': 'New Orleans Pelicans', 'NY': 'New York Knicks', 'OKC': 'Oklahoma City Thunder', 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers', 'SAC': 'Sacramento Kings', 'SA': 'San Antonio Spurs', 'TOR': 'Toronto Raptors', 'UTAH': 'Utah Jazz', 'WSH': 'Washington Wizards' }
         if df_players_24_25 is not None:
             df_players_24_25['full_team_name'] = df_players_24_25['Team'].apply(lambda x: team_abbr_map.get(str(x).split('/')[0].strip().upper()))
