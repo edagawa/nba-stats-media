@@ -1,9 +1,16 @@
 name: Update Latest YouTube Videos Weekly
 
 on:
-  # 日本時間の毎週金曜 午前9時に実行 (UTCでは木曜の24時)
+  # mainブランチにプッシュされた時に実行
+  push:
+    branches:
+      - main
+      - master # 古い形式のブランチ名にも対応
+
+  # 日本時間の毎週金曜 午前9時に実行
   schedule:
     - cron: '0 0 * * 5'
+  
   # 手動でも実行できるようにする
   workflow_dispatch:
 
