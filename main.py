@@ -121,7 +121,7 @@ def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1,
 
             top_players_by_stat[name] = {
                 'data': player_data_list,
-                'url': "#", # 選手スタッツの総合ランキングページはまだないため
+                'url': f"{base_path}/2024-25/index.html#{stat}",
             }
 
     main_video_id = video_data.get("NBA_MAIN")
@@ -281,11 +281,114 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         except Exception as e: print(f"警告: {player_name} のページ生成中にエラー: {e}")
     print("--- 選手ページの生成完了 ---")
 
+def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
+    """シーズン別の選手ランキングページを、トップ10ランキングとグラフを含めて生成する"""
+    print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
+    if df_current is None or df_previous is None:
+        print(f"警告: {season_str}シーズンの選手データが不足しているため、ページを生成できません。")
+        return
+
+    template = env.get_template('season_player_index_template.html')
+    
+    player_stats_to_show = {'PTS': '得点', 'REB': 'リバウンド', 'AST': 'アシスト', 'STL': 'スティール', 'BLK': 'ブロック'}
+    
+    # 比較対象のシーズンを特定
+    current_year_short = season_str.split('-')[0]
+    previous_year_short = str(int(current_year_short) - 1)
+    previous_season_str = f"{previous_year_short}-{current_year_short[2:]}"
+    
+    df_merged = pd.merge(df_current, df_previous, on='Player', how='left', suffixes=('_current', '_previous'))
+
+    leaders_with_graphs = []
+
+    for stat, name_jp in player_stats_to_show.items():
+        stat_key_current = f'{stat}_current'
+        stat_key_previous = f'{stat}_previous'
+        stat_key_change = f'{stat}_change'
+
+        for col in [stat_key_current, stat_key_previous]:
+            df_merged[col] = pd.to_numeric(df_merged[col], errors='coerce')
+        
+        df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
+        
+        top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
+
+        # --- グラフ生成 ---
+        plt.style.use('seaborn-v0_8-talk')
+        fig, ax = plt.subplots(figsize=(10, 8))
+        y = np.arange(len(top_10_players))
+        height = 0.4
+        
+        # 降順にソートされているので、グラフで上から表示するためにデータを逆順にする
+        players_reversed = top_10_players.iloc[::-1]
+
+        ax.barh(y - height/2, players_reversed[stat_key_previous], height, label=previous_season_str, color='#6c757d')
+        ax.barh(y + height/2, players_reversed[stat_key_current], height, label=season_str, color='#007bff')
+
+        ax.set_xlabel(name_jp)
+        ax.set_ylabel('選手名')
+        ax.set_title(f'{season_str}シーズン {name_jp} トップ10')
+        ax.set_yticks(y)
+        ax.set_yticklabels(players_reversed['Player'])
+        ax.legend()
+        fig.tight_layout()
+        
+        graph_filename = f"{season_str}_{stat}.svg"
+        graph_path = f"output/images/season_leaders/{graph_filename}"
+        plt.savefig(graph_path, format="svg")
+        plt.close()
+        
+        # --- テンプレート用データ整形 ---
+        player_data_list = []
+        for _, row in top_10_players.iterrows():
+            player_filename = re.sub(r'[\\/*?:"<>|]', "", row['Player']).replace(' ', '_')
+            player_data_list.append({
+                'Player': row['Player'],
+                'url': f"{base_path}/players/{player_filename}.html",
+                'value': row[stat_key_current],
+                'change': row[stat_key_change]
+            })
+
+        leaders_with_graphs.append({
+            'stat_en': stat,
+            'stat_jp': name_jp,
+            'data': player_data_list,
+            'graph_url': f"{base_path}/images/season_leaders/{graph_filename}"
+        })
+
+    stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
+    
+    render_data = {
+        'base_path': base_path,
+        'season_str': season_str,
+        'leaders_with_graphs': leaders_with_graphs,
+        'stat_pages': stat_pages_footer,
+        'all_teams_structured': all_teams_structured_footer,
+        'glossary_url': f'{base_path}/glossary.html',
+    }
+
+    output_path = f"output/{season_str}/index.html"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(template.render(render_data))
+    print(f"--- {season_str}シーズン 選手ランキングページの生成完了 ---")
+
+
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     base_path = "/nba-stats-media"
-    os.makedirs("output/teams", exist_ok=True); os.makedirs("output/images", exist_ok=True); os.makedirs("output/stats", exist_ok=True); os.makedirs("output/logos", exist_ok=True); os.makedirs("output/css", exist_ok=True); os.makedirs("output/players", exist_ok=True); os.makedirs("output/images/players", exist_ok=True)
+    os.makedirs("output/teams", exist_ok=True)
+    os.makedirs("output/images", exist_ok=True)
+    os.makedirs("output/stats", exist_ok=True)
+    os.makedirs("output/logos", exist_ok=True)
+    os.makedirs("output/css", exist_ok=True)
+    os.makedirs("output/players", exist_ok=True)
+    os.makedirs("output/images/players", exist_ok=True)
+    os.makedirs("output/2023-24", exist_ok=True)
+    os.makedirs("output/2024-25", exist_ok=True)
+    os.makedirs("output/images/season_leaders", exist_ok=True)
+
     print("出力ディレクトリの準備が完了しました。")
+
     df_23_24, df_24_25 = None, None
     try:
         df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv"); df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
@@ -330,4 +433,7 @@ if __name__ == "__main__":
     generate_stat_pages(df_23_24, df_24_25, env, base_path)
     generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, video_data, env, player_team_map, base_path)
     generate_player_pages(env, scoring_timeline_data, df_players_23_24, df_players_24_25, player_team_map, base_path)
+    generate_season_player_index(env, base_path, '2024-25', df_players_24_25, df_players_23_24)
+    generate_season_player_index(env, base_path, '2023-24', df_players_23_24, df_players_24_25)
+
     print("\n--- すべての処理が完了しました ---")

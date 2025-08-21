@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>NBA {{ season_str }}シーズン | 選手スタッツリーダー</title>
+    <meta name="description" content="NBA {{ season_str }}シーズンの主要スタッツ（得点、リバウンド、アシストなど）におけるトップ10選手ランキング。グラフで前年からの変動も確認できます。">
+    {% include '_gtm_head.html' %}
+    <link rel="stylesheet" href="{{ base_path }}/css/style.css">
+    <style>
+        .leaderboard-card {
+            display: flex;
+            flex-direction: column;
+        }
+        .leaderboard-card img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    {% include '_gtm_body.html' %}
+    <header>
+        <h1>NBA Stats Media</h1>
+        <nav>
+            <a href="{{ base_path }}/index.html">トップ</a> |
+            <a href="{{ glossary_url }}">指標解説</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="intro">
+            <h2>{{ season_str }}シーズン 選手スタッツリーダー</h2>
+            <p>このページでは、{{ season_str }}シーズンの主要カテゴリにおける個人成績トップ10の選手と、そのスタッツを前年と比較したグラフを掲載しています。</p>
+        </div>
+
+        <section class="leaderboard-section">
+            <div class="leaderboard-grid">
+                {% for stat_info in leaders_with_graphs %}
+                <div class="leaderboard-card" id="{{ stat_info.stat_en }}">
+                    <h3><a href="#{{ stat_info.stat_en }}">{{ stat_info.stat_jp }}</a></h3>
+                    
+                    <img src="{{ stat_info.graph_url }}" alt="{{ season_str }}シーズン {{ stat_info.stat_jp }} トップ10選手の前年比較グラフ">
+                    
+                    <ol>
+                        {% for player in stat_info.data %}
+                        <li>
+                            <span class="rank">{{ loop.index }}</span>
+                            <span class="name"><a href="{{ player.url }}">{{ player.Player }}</a></span>
+                            <span class="value">{{ '%.1f'|format(player.value) }}</span>
+                            <span class="change {{ 'positive' if player.change > 0 else 'negative' if player.change < 0 else 'neutral' }}">
+                                ({{ '%+.1f'|format(player.change) }})
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+    {% include 'footer.html' %}
+</body>
+</html>
