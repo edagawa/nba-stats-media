@@ -13,6 +13,9 @@ NBA_TEAMS = [
     'Sacramento Kings', 'San Antonio Spurs', 'Toronto Raptors', 'Utah Jazz', 'Washington Wizards'
 ]
 
+# ★★★ ここにNBA公式チャンネルのIDを定義します ★★★
+NBA_MAIN_CHANNEL_ID = "UCWJ2lWNubArHWmf3FIHbfcQ"
+
 def fetch_latest_videos():
     """YouTube APIを使い、各チームの最新動画IDを取得してJSONファイルに保存する"""
     
