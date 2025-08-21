@@ -333,6 +333,19 @@ footer h2 { margin-bottom: 20px; grid-column: 1 / -1; text-align: center; }
 .change.negative::before { content: '▼ '; }
 .change.neutral::before { content: '- '; }
 
+.leaderboard-card {
+    display: flex;
+    flex-direction: column;
+}
+.leaderboard-card img {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
 
 /* --- レスポンシブ対応 --- */
 @media (max-width: 768px) {
