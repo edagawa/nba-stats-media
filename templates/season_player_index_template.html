@@ -6,19 +6,6 @@
     <meta name="description" content="NBA {{ season_str }}シーズンの主要スタッツ（得点、リバウンド、アシストなど）におけるトップ10選手ランキング。グラフで前年からの変動も確認できます。">
     {% include '_gtm_head.html' %}
     <link rel="stylesheet" href="{{ base_path }}/css/style.css">
-    <style>
-        .leaderboard-card {
-            display: flex;
-            flex-direction: column;
-        }
-        .leaderboard-card img {
-            max-width: 100%;
-            height: auto;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-    </style>
 </head>
 <body>
     {% include '_gtm_body.html' %}
@@ -39,8 +26,9 @@
         <section class="leaderboard-section">
             <div class="leaderboard-grid">
                 {% for stat_info in leaders_with_graphs %}
-                <div class="leaderboard-card" id="{{ stat_info.stat_en }}">
-                    <h3><a href="#{{ stat_info.stat_en }}">{{ stat_info.stat_jp }}</a></h3>
+                <div class="leaderboard-card">
+                    
+                    <h3>{{ stat_info.stat_jp }}</h3>
                     
                     <img src="{{ stat_info.graph_url }}" alt="{{ season_str }}シーズン {{ stat_info.stat_jp }} トップ10選手の前年比較グラフ">
                     

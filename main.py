@@ -57,88 +57,45 @@ def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1,
     print("--- トップページの生成開始 ---")
     template = env.get_template('index_template.html')
 
-    # --- トップ5チームのデータを生成 ---
+    # --- トップ5チームのデータを生成 --- (変更なし)
     top_teams_by_stat = {}
     team_stats_to_show = {'OFF EFF': 'オフェンス効率', 'DEF EFF': 'ディフェンス効率', 'PACE': 'ペース'}
-    
     if df_teams_s1 is not None and df_teams_s2 is not None:
         df_teams_merged = pd.merge(df_teams_s2, df_teams_s1, on='Team', suffixes=('_s2', '_s1'), how='left')
-        
         for stat, name in team_stats_to_show.items():
-            stat_key_s2 = f'{stat}_s2'
-            stat_key_s1 = f'{stat}_s1'
-            stat_key_change = f'{stat}_change'
-            
+            stat_key_s2 = f'{stat}_s2'; stat_key_s1 = f'{stat}_s1'; stat_key_change = f'{stat}_change'
             sort_asc = True if stat in ['DEF EFF', 'TO'] else False
-            
             df_teams_merged[stat_key_change] = df_teams_merged[stat_key_s2] - df_teams_merged[stat_key_s1]
-            
             top_5_teams = df_teams_merged.sort_values(by=stat_key_s2, ascending=sort_asc).head(5)
-            
-            # データをテンプレート用に整形
-            team_data_list = []
-            for _, row in top_5_teams.iterrows():
-                team_data_list.append({
-                    'Team': row['Team'],
-                    'url': f"{base_path}/teams/comparison_{row['Team'].replace(' ', '_')}.html",
-                    'value': row[stat_key_s2],
-                    'change': row[stat_key_change]
-                })
-
-            top_teams_by_stat[name] = {
-                'data': team_data_list,
-                'url': f"{base_path}/stats/{stat.replace('%', '_PCT').replace(' ', '_')}.html",
-            }
+            team_data_list = [{'Team': row['Team'], 'url': f"{base_path}/teams/comparison_{row['Team'].replace(' ', '_')}.html", 'value': row[stat_key_s2], 'change': row[stat_key_change]} for _, row in top_5_teams.iterrows()]
+            top_teams_by_stat[name] = {'data': team_data_list, 'url': f"{base_path}/stats/{stat.replace('%', '_PCT').replace(' ', '_')}.html"}
 
     # --- トップ5選手のデータを生成 ---
     top_players_by_stat = {}
     player_stats_to_show = {'PTS': '得点', 'REB': 'リバウンド', 'AST': 'アシスト'}
-
     if df_players_s1 is not None and df_players_s2 is not None:
         df_players_merged = pd.merge(df_players_s2, df_players_s1, on='Player', how='left', suffixes=('_s2', '_s1'))
-        
         for stat, name in player_stats_to_show.items():
-            stat_key_s2 = f'{stat}_s2'
-            stat_key_s1 = f'{stat}_s1'
-            stat_key_change = f'{stat}_change'
-
+            stat_key_s2 = f'{stat}_s2'; stat_key_s1 = f'{stat}_s1'; stat_key_change = f'{stat}_change'
             for col in [stat_key_s1, stat_key_s2]:
                 df_players_merged[col] = pd.to_numeric(df_players_merged[col], errors='coerce')
-            
             df_players_merged[stat_key_change] = df_players_merged[stat_key_s2] - df_players_merged[stat_key_s1]
-            
             top_5_players = df_players_merged.sort_values(by=stat_key_s2, ascending=False).head(5)
-            
             player_data_list = []
             for _, row in top_5_players.iterrows():
                 player_filename = re.sub(r'[\\/*?:"<>|]', "", row['Player']).replace(' ', '_')
-                player_data_list.append({
-                    'Player': row['Player'],
-                    'url': f"{base_path}/players/{player_filename}.html",
-                    'value': row[stat_key_s2],
-                    'change': row[stat_key_change]
-                })
+                player_data_list.append({'Player': row['Player'], 'url': f"{base_path}/players/{player_filename}.html", 'value': row[stat_key_s2], 'change': row[stat_key_change]})
 
+            # ★ 修正点1 ★: URLをアンカーなしのパスに変更
             top_players_by_stat[name] = {
                 'data': player_data_list,
-                'url': f"{base_path}/2024-25/index.html#{stat}",
+                'url': f"{base_path}/2024-25/index.html",
             }
 
     main_video_id = video_data.get("NBA_MAIN")
     main_video_embed_url = f"https://www.youtube.com/embed/{main_video_id}" if main_video_id else None
-    
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
-    
-    render_data = { 
-        'base_path': base_path, 
-        'top_teams_by_stat': top_teams_by_stat, 
-        'top_players_by_stat': top_players_by_stat, 
-        'stat_pages': stat_pages_footer, 
-        'all_teams_structured': all_teams_structured_footer, 
-        'glossary_url': f'{base_path}/glossary.html', 
-        'main_video_embed_url': main_video_embed_url 
-    }
-    
+    render_data = {'base_path': base_path, 'top_teams_by_stat': top_teams_by_stat, 'top_players_by_stat': top_players_by_stat, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html', 'main_video_embed_url': main_video_embed_url}
     with open("output/index.html", "w", encoding="utf-8") as f:
         f.write(template.render(render_data))
     print("--- トップページの生成完了 ---")
@@ -290,44 +247,47 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
 
     template = env.get_template('season_player_index_template.html')
     
-    player_stats_to_show = {'PTS': '得点', 'REB': 'リバウンド', 'AST': 'アシスト', 'STL': 'スティール', 'BLK': 'ブロック'}
+    # ★ 修正点2 ★: グラフ用に英語名、ページ表示用に日本語名を定義
+    player_stats_to_show = {
+        'PTS': {'jp': '得点', 'en': 'Points'}, 
+        'REB': {'jp': 'リバウンド', 'en': 'Rebounds'}, 
+        'AST': {'jp': 'アシスト', 'en': 'Assists'}, 
+        'STL': {'jp': 'スティール', 'en': 'Steals'}, 
+        'BLK': {'jp': 'ブロック', 'en': 'Blocks'}
+    }
     
-    # 比較対象のシーズンを特定
     current_year_short = season_str.split('-')[0]
     previous_year_short = str(int(current_year_short) - 1)
     previous_season_str = f"{previous_year_short}-{current_year_short[2:]}"
     
     df_merged = pd.merge(df_current, df_previous, on='Player', how='left', suffixes=('_current', '_previous'))
-
     leaders_with_graphs = []
 
-    for stat, name_jp in player_stats_to_show.items():
-        stat_key_current = f'{stat}_current'
-        stat_key_previous = f'{stat}_previous'
-        stat_key_change = f'{stat}_change'
+    for stat, names in player_stats_to_show.items():
+        name_jp = names['jp']
+        name_en = names['en']
 
+        stat_key_current = f'{stat}_current'; stat_key_previous = f'{stat}_previous'; stat_key_change = f'{stat}_change'
         for col in [stat_key_current, stat_key_previous]:
             df_merged[col] = pd.to_numeric(df_merged[col], errors='coerce')
-        
         df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
-        
         top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
 
-        # --- グラフ生成 ---
+        # --- グラフ生成 (色とラベルを修正) ---
         plt.style.use('seaborn-v0_8-talk')
         fig, ax = plt.subplots(figsize=(10, 8))
         y = np.arange(len(top_10_players))
         height = 0.4
-        
-        # 降順にソートされているので、グラフで上から表示するためにデータを逆順にする
         players_reversed = top_10_players.iloc[::-1]
 
-        ax.barh(y - height/2, players_reversed[stat_key_previous], height, label=previous_season_str, color='#6c757d')
-        ax.barh(y + height/2, players_reversed[stat_key_current], height, label=season_str, color='#007bff')
+        # ★ 修正点2 ★: 色指定を削除し、デフォルトの配色（青、オレンジ）を使用
+        ax.barh(y - height/2, players_reversed[stat_key_previous], height, label=previous_season_str)
+        ax.barh(y + height/2, players_reversed[stat_key_current], height, label=season_str)
 
-        ax.set_xlabel(name_jp)
-        ax.set_ylabel('選手名')
-        ax.set_title(f'{season_str}シーズン {name_jp} トップ10')
+        # ★ 修正点2 ★: ラベルとタイトルを英語に変更
+        ax.set_xlabel(name_en)
+        ax.set_ylabel('Player')
+        ax.set_title(f'Top 10 {name_en} Leaders ({season_str} Season)')
         ax.set_yticks(y)
         ax.set_yticklabels(players_reversed['Player'])
         ax.legend()
@@ -338,35 +298,17 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
         plt.savefig(graph_path, format="svg")
         plt.close()
         
-        # --- テンプレート用データ整形 ---
-        player_data_list = []
-        for _, row in top_10_players.iterrows():
-            player_filename = re.sub(r'[\\/*?:"<>|]', "", row['Player']).replace(' ', '_')
-            player_data_list.append({
-                'Player': row['Player'],
-                'url': f"{base_path}/players/{player_filename}.html",
-                'value': row[stat_key_current],
-                'change': row[stat_key_change]
-            })
+        player_data_list = [{'Player': row['Player'], 'url': f"{base_path}/players/{player_filename}.html", 'value': row[stat_key_current], 'change': row[stat_key_change]} for _, row in top_10_players.iterrows() for player_filename in [re.sub(r'[\\/*?:"<>|]', "", row['Player']).replace(' ', '_')]]
 
         leaders_with_graphs.append({
             'stat_en': stat,
-            'stat_jp': name_jp,
+            'stat_jp': name_jp, # テンプレートには日本語名を渡す
             'data': player_data_list,
             'graph_url': f"{base_path}/images/season_leaders/{graph_filename}"
         })
 
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
-    
-    render_data = {
-        'base_path': base_path,
-        'season_str': season_str,
-        'leaders_with_graphs': leaders_with_graphs,
-        'stat_pages': stat_pages_footer,
-        'all_teams_structured': all_teams_structured_footer,
-        'glossary_url': f'{base_path}/glossary.html',
-    }
-
+    render_data = {'base_path': base_path, 'season_str': season_str, 'leaders_with_graphs': leaders_with_graphs, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html'}
     output_path = f"output/{season_str}/index.html"
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(template.render(render_data))
