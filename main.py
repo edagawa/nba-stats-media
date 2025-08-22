@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-import traceback
 import os
 import sys
 import pandas as pd
 import jinja2
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg')  # ★★★ 1. グラフが白くなる問題の対策 ★★★
 import matplotlib.pyplot as plt
 import numpy as np
 import re
@@ -54,51 +53,37 @@ def get_footer_data(base_path):
     return stat_pages, all_teams_structured
 
 def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1, df_players_s2, video_data):
-    """トップページ(index.html)を、トップ5ランキングを含めて生成する"""
     print("--- トップページの生成開始 ---")
     template = env.get_template('index_template.html')
-
-    # --- トップ5チームのデータを生成 --- (変更なし)
-    top_teams_by_stat = {}
+    top_teams_by_stat, top_players_by_stat = {}, {}
     team_stats_to_show = {'OFF EFF': 'オフェンス効率', 'DEF EFF': 'ディフェンス効率', 'PACE': 'ペース'}
     if df_teams_s1 is not None and df_teams_s2 is not None:
         df_teams_merged = pd.merge(df_teams_s2, df_teams_s1, on='Team', suffixes=('_s2', '_s1'), how='left')
         for stat, name in team_stats_to_show.items():
-            stat_key_s2 = f'{stat}_s2'; stat_key_s1 = f'{stat}_s1'; stat_key_change = f'{stat}_change'
             sort_asc = True if stat in ['DEF EFF', 'TO'] else False
-            df_teams_merged[stat_key_change] = df_teams_merged[stat_key_s2] - df_teams_merged[stat_key_s1]
-            top_5_teams = df_teams_merged.sort_values(by=stat_key_s2, ascending=sort_asc).head(5)
-            team_data_list = [{'Team': row['Team'], 'url': f"{base_path}/teams/comparison_{row['Team'].replace(' ', '_')}.html", 'value': row[stat_key_s2], 'change': row[stat_key_change]} for _, row in top_5_teams.iterrows()]
-            top_teams_by_stat[name] = {'data': team_data_list, 'url': f"{base_path}/stats/{stat.replace('%', '_PCT').replace(' ', '_')}.html"}
-
-    # --- トップ5選手のデータを生成 ---
-    top_players_by_stat = {}
+            df_teams_merged[f'{stat}_change'] = df_teams_merged[f'{stat}_s2'] - df_teams_merged[f'{stat}_s1']
+            top_5_teams = df_teams_merged.sort_values(by=f'{stat}_s2', ascending=sort_asc).head(5)
+            team_data_list = []
+            for _, row in top_5_teams.iterrows():
+                team_data_list.append({ 'Team': row['Team'], 'url': f"{base_path}/teams/comparison_{row['Team'].replace(' ', '_')}.html", 'value': row[f'{stat}_s2'], 'change': row[f'{stat}_change'] })
+            top_teams_by_stat[name] = { 'data': team_data_list, 'url': f"{base_path}/stats/{stat.replace('%', '_PCT').replace(' ', '_')}.html" }
     player_stats_to_show = {'PTS': '得点', 'REB': 'リバウンド', 'AST': 'アシスト'}
     if df_players_s1 is not None and df_players_s2 is not None:
         df_players_merged = pd.merge(df_players_s2, df_players_s1, on='Player', how='left', suffixes=('_s2', '_s1'))
         for stat, name in player_stats_to_show.items():
-            stat_key_s2 = f'{stat}_s2'; stat_key_s1 = f'{stat}_s1'; stat_key_change = f'{stat}_change'
-            for col in [stat_key_s1, stat_key_s2]:
-                df_players_merged[col] = pd.to_numeric(df_players_merged[col], errors='coerce')
-            df_players_merged[stat_key_change] = df_players_merged[stat_key_s2] - df_players_merged[stat_key_s1]
-            top_5_players = df_players_merged.sort_values(by=stat_key_s2, ascending=False).head(5)
+            for season_suffix in ['_s1', '_s2']: df_players_merged[f'{stat}{season_suffix}'] = pd.to_numeric(df_players_merged[f'{stat}{season_suffix}'], errors='coerce')
+            df_players_merged[f'{stat}_change'] = df_players_merged[f'{stat}_s2'] - df_players_merged[f'{stat}_s1']
+            top_5_players = df_players_merged.sort_values(by=f'{stat}_s2', ascending=False).head(5)
             player_data_list = []
             for _, row in top_5_players.iterrows():
                 player_filename = re.sub(r'[\\/*?:"<>|]', "", row['Player']).replace(' ', '_')
-                player_data_list.append({'Player': row['Player'], 'url': f"{base_path}/players/{player_filename}.html", 'value': row[stat_key_s2], 'change': row[stat_key_change]})
-
-            # ★ 修正点1 ★: URLをアンカーなしのパスに変更
-            top_players_by_stat[name] = {
-                'data': player_data_list,
-                'url': f"{base_path}/2024-25/index.html",
-            }
-
+                player_data_list.append({ 'Player': row['Player'], 'url': f"{base_path}/players/{player_filename}.html", 'value': row[f'{stat}_s2'], 'change': row[f'{stat}_change'] })
+            top_players_by_stat[name] = { 'data': player_data_list, 'url': "#" }
     main_video_id = video_data.get("NBA_MAIN")
     main_video_embed_url = f"https://www.youtube.com/embed/{main_video_id}" if main_video_id else None
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
-    render_data = {'base_path': base_path, 'top_teams_by_stat': top_teams_by_stat, 'top_players_by_stat': top_players_by_stat, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html', 'main_video_embed_url': main_video_embed_url}
-    with open("output/index.html", "w", encoding="utf-8") as f:
-        f.write(template.render(render_data))
+    render_data = { 'base_path': base_path, 'top_teams_by_stat': top_teams_by_stat, 'top_players_by_stat': top_players_by_stat, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html', 'main_video_embed_url': main_video_embed_url }
+    with open("output/index.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
     print("--- トップページの生成完了 ---")
 
 def generate_glossary_page(env, base_path):
@@ -167,9 +152,7 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
     if df_s1_raw is None or df_s2_raw is None:
         print("警告: 選手スタッツデータが不足しているため、選手ページを生成できません。")
         return
-
     def generate_player_comment(player_name, season_str_long, player_season_timeline):
-        # ... (この内側の関数は変更なし) ...
         if player_season_timeline.empty: return f"{player_name}選手の{season_str_long}シーズンの詳細な得点データはありません。"
         point_map = {'3PT': 3, '2PT': 2, 'FT': 1}; made_shots = player_season_timeline[player_season_timeline['MADE_FLAG'] == 1].copy()
         if made_shots.empty: return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
@@ -177,8 +160,10 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         q1_points = made_shots[made_shots['absolute_minute'] < 12]['POINTS'].sum(); q2_points = made_shots[(made_shots['absolute_minute'] >= 12) & (made_shots['absolute_minute'] < 24)]['POINTS'].sum(); q3_points = made_shots[(made_shots['absolute_minute'] >= 24) & (made_shots['absolute_minute'] < 36)]['POINTS'].sum(); q4_points = made_shots[made_shots['absolute_minute'] >= 36]['POINTS'].sum()
         total_points = made_shots['POINTS'].sum()
         if total_points == 0: return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
-        points_per_quarter = {1: q1_points, 2: q2_points, 3: q3_points, 4: q4_points}; best_quarter = max(points_per_quarter, key=points_per_quarter.get)
-        shot_attempts = player_season_timeline['SHOT_TYPE'].value_counts(normalize=True); primary_style = "バランスの取れた攻撃が持ち味"
+        points_per_quarter = {1: q1_points, 2: q2_points, 3: q3_points, 4: q4_points}
+        best_quarter = max(points_per_quarter, key=points_per_quarter.get)
+        shot_attempts = player_season_timeline['SHOT_TYPE'].value_counts(normalize=True)
+        primary_style = "バランスの取れた攻撃が持ち味"
         if shot_attempts.get('3PT', 0) > 0.4: primary_style = "3ポイントシュートを多用するプレースタイル"
         elif shot_attempts.get('2PT', 0) > 0.55: primary_style = "2ポイントエリアでの得点を主体とするプレースタイル"
         comment_parts = []
@@ -188,152 +173,61 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             comment_parts.append(f"{player_name}選手は、試合序盤から積極的に得点を狙うスタートダッシュ型の選手です。"); comment_parts.append(f"第1クォーターに最も多くの得点を挙げる傾向があり、チームに勢いをもたらします。")
         else: comment_parts.append(f"{player_name}選手は、シーズンを通して安定したパフォーマンスを見せ、特に第{best_quarter}クォーターで最も多くの得点を記録しています。")
         comment_parts.append(f"強みは{primary_style}です。"); return " ".join(comment_parts)
-
     df_merged = pd.merge(df_s2_raw, df_s1_raw, on='Player', how='left', suffixes=('_s2', '_s1'))
     template = env.get_template('player_comparison_template.html')
     stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
-    
     for index, player_data in df_merged.iterrows():
         player_name = player_data.get('Player', 'Unknown'); render_data = {}
         try:
             player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
             stats_s2_table = pd.DataFrame(player_data.filter(like='_s2')).rename(index=lambda x: x.replace('_s2', ''))
             stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
-            
-            # --- グラフ1: キースタッツ比較 ---
-            graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
-            graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
-            graph_stats_s2 = graph_stats_s2_series.fillna(0).values
-            graph_stats_s1 = graph_stats_s1_series.fillna(0).values
-            
-            # ★★★ 修正箇所 ★★★: 削除されていた 'x' の定義を戻す
+            graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce'); graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
+            graph_stats_s2 = graph_stats_s2_series.fillna(0).values; graph_stats_s1 = graph_stats_s1_series.fillna(0).values
             x = np.arange(len(stats_to_compare)); width = 0.35
-            
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(x - width/2, graph_stats_s1, width, label='2023-24'); ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
+            fig, ax = plt.subplots(figsize=(10, 6)); ax.bar(x - width/2, graph_stats_s1, width, label='2023-24'); ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
             ax.set_ylabel('Value'); ax.set_title(f'Key Stats Comparison: {player_name}'); ax.set_xticks(x); ax.set_xticklabels(stats_to_compare); ax.legend(); fig.tight_layout()
-            
-            plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
-            plt.close(fig)
-
+            plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg"); plt.close()
             team_name = player_team_map.get(player_name, ''); team_url = ""
             if team_name: team_url = f"{base_path}/teams/comparison_{team_name.replace(' ', '_')}.html"
             render_data = { 'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 'player_info': stats_s2_table.T.to_dict('records')[0], 'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'team_name': team_name, 'team_url': team_url, 'glossary_url': f'{base_path}/glossary.html' }
-            
             for season_str_short in ["23-24", "24-25"]:
                 season_str_long = f"20{season_str_short}"
                 player_timeline = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == season_str_long)]
                 if player_timeline.empty: continue
-                
                 comment = generate_player_comment(player_name, season_str_long, player_timeline)
                 if season_str_short == "23-24": render_data['comment_23_24'] = comment
                 elif season_str_short == "24-25": render_data['comment_24_25'] = comment
-                
-                # ... (タイムライングラフの生成処理は変更なし) ...
-                
+                # Graph 1
+                attempts_agg = pd.DataFrame({'absolute_minute': range(48)}); attempts_pivot = player_timeline.pivot_table(index='absolute_minute', columns=['SHOT_TYPE', 'MADE_FLAG'], aggfunc='size', fill_value=0)
+                attempts_pivot.columns = ['_'.join(map(str, col)) for col in attempts_pivot.columns]
+                attempts_agg = pd.merge(attempts_agg, attempts_pivot, on='absolute_minute', how='left').fillna(0)
+                fig, ax = plt.subplots(figsize=(15, 7)); bottom = np.zeros(48)
+                miss_3pt = attempts_agg.get('3PT_0', 0); miss_2pt = attempts_agg.get('2PT_0', 0); miss_ft = attempts_agg.get('FT_0', 0)
+                ax.bar(attempts_agg['absolute_minute'], miss_3pt, bottom=bottom, color='#aec7e8', label='3PT Miss'); bottom += miss_3pt; ax.bar(attempts_agg['absolute_minute'], miss_2pt, bottom=bottom, color='#ffbb78', label='2PT Miss'); bottom += miss_2pt; ax.bar(attempts_agg['absolute_minute'], miss_ft, bottom=bottom, color='#ff9896', label='FT Miss'); bottom += miss_ft
+                made_3pt = attempts_agg.get('3PT_1', 0); made_2pt = attempts_agg.get('2PT_1', 0); made_ft = attempts_agg.get('FT_1', 0)
+                ax.bar(attempts_agg['absolute_minute'], made_3pt, bottom=bottom, color='#1f77b4', label='3PT Made'); bottom += made_3pt; ax.bar(attempts_agg['absolute_minute'], made_2pt, bottom=bottom, color='#ff7f0e', label='2PT Made'); bottom += made_2pt; ax.bar(attempts_agg['absolute_minute'], made_ft, bottom=bottom, color='#d62728', label='FT Made')
+                ax.set_title(f'{player_name} - Shot Attempts (Made/Miss) Timeline ({season_str_long})'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Number of Attempts'); ax.set_xticks([0, 12, 24, 36, 47]); ax.grid(axis='y', linestyle='--', alpha=0.7); ax.legend(); plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg"); plt.close()
+                # Graph 2
+                points_agg = pd.DataFrame({'absolute_minute': range(48)})
+                made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1]
+                if not made_shots.empty:
+                    point_map = {'3PT': 3, '2PT': 2, 'FT': 1}; made_shots = made_shots.copy(); made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
+                    points_by_type = made_shots.groupby(['absolute_minute', 'SHOT_TYPE'])['POINTS'].sum().unstack(fill_value=0)
+                    points_agg = pd.merge(points_agg, points_by_type, on='absolute_minute', how='left').fillna(0)
+                fig, ax = plt.subplots(figsize=(15, 7)); ax.bar(points_agg['absolute_minute'], points_agg.get('3PT', 0), color='#1f77b4', label='3-Pointers'); ax.bar(points_agg['absolute_minute'], points_agg.get('2PT', 0), bottom=points_agg.get('3PT', 0), color='#ff7f0e', label='2-Pointers'); ax.bar(points_agg['absolute_minute'], points_agg.get('FT', 0), bottom=points_agg.get('3PT', 0) + points_agg.get('2PT', 0), color='#2ca02c', label='Free Throws')
+                ax.set_title(f'{player_name} - Points Scored Timeline ({season_str_long})'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Points Scored'); ax.set_xticks([0, 12, 24, 36, 47]); ax.grid(axis='y', linestyle='--', alpha=0.7); ax.legend(); plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg"); plt.close()
             output_path = f"output/players/{player_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
-        
-        except Exception as e:
-            print(f"警告: {player_name} のページ生成中にエラーが発生しました。")
-            traceback.print_exc()
-
+        except Exception as e: print(f"警告: {player_name} のページ生成中にエラー: {e}")
     print("--- 選手ページの生成完了 ---")
-
-def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
-    """シーズン別の選手ランキングページを、トップ10ランキングとグラフを含めて生成する"""
-    print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
-    if df_current is None or df_previous is None:
-        print(f"警告: {season_str}シーズンの選手データが不足しているため、ページを生成できません。")
-        return
-
-    template = env.get_template('season_player_index_template.html')
-    
-    # ★ 修正点2 ★: グラフ用に英語名、ページ表示用に日本語名を定義
-    player_stats_to_show = {
-        'PTS': {'jp': '得点', 'en': 'Points'}, 
-        'REB': {'jp': 'リバウンド', 'en': 'Rebounds'}, 
-        'AST': {'jp': 'アシスト', 'en': 'Assists'}, 
-        'STL': {'jp': 'スティール', 'en': 'Steals'}, 
-        'BLK': {'jp': 'ブロック', 'en': 'Blocks'}
-    }
-    
-    current_year_short = season_str.split('-')[0]
-    previous_year_short = str(int(current_year_short) - 1)
-    previous_season_str = f"{previous_year_short}-{current_year_short[2:]}"
-    
-    df_merged = pd.merge(df_current, df_previous, on='Player', how='left', suffixes=('_current', '_previous'))
-    leaders_with_graphs = []
-
-    for stat, names in player_stats_to_show.items():
-        name_jp = names['jp']
-        name_en = names['en']
-
-        stat_key_current = f'{stat}_current'; stat_key_previous = f'{stat}_previous'; stat_key_change = f'{stat}_change'
-        for col in [stat_key_current, stat_key_previous]:
-            df_merged[col] = pd.to_numeric(df_merged[col], errors='coerce')
-        df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
-        top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
-
-        # --- グラフ生成 (色とラベルを修正) ---
-        plt.style.use('seaborn-v0_8-talk')
-        fig, ax = plt.subplots(figsize=(10, 8))
-        y = np.arange(len(top_10_players))
-        height = 0.4
-        players_reversed = top_10_players.iloc[::-1]
-
-        # ★ 修正点2 ★: 色指定を削除し、デフォルトの配色（青、オレンジ）を使用
-        ax.barh(y - height/2, players_reversed[stat_key_previous], height, label=previous_season_str)
-        ax.barh(y + height/2, players_reversed[stat_key_current], height, label=season_str)
-
-        # ★ 修正点2 ★: ラベルとタイトルを英語に変更
-        ax.set_xlabel(name_en)
-        ax.set_ylabel('Player')
-        ax.set_title(f'Top 10 {name_en} Leaders ({season_str} Season)')
-        ax.set_yticks(y)
-        ax.set_yticklabels(players_reversed['Player'])
-        ax.legend()
-        fig.tight_layout()
-        
-        graph_filename = f"{season_str}_{stat}.svg"
-        graph_path = f"output/images/season_leaders/{graph_filename}"
-        plt.savefig(graph_path, format="svg")
-        plt.close()
-        
-        player_data_list = [{'Player': row['Player'], 'url': f"{base_path}/players/{player_filename}.html", 'value': row[stat_key_current], 'change': row[stat_key_change]} for _, row in top_10_players.iterrows() for player_filename in [re.sub(r'[\\/*?:"<>|]', "", row['Player']).replace(' ', '_')]]
-
-        leaders_with_graphs.append({
-            'stat_en': stat,
-            'stat_jp': name_jp, # テンプレートには日本語名を渡す
-            'data': player_data_list,
-            'graph_url': f"{base_path}/images/season_leaders/{graph_filename}"
-        })
-
-    stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
-    render_data = {'base_path': base_path, 'season_str': season_str, 'leaders_with_graphs': leaders_with_graphs, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html'}
-    output_path = f"output/{season_str}/index.html"
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(template.render(render_data))
-    print(f"--- {season_str}シーズン 選手ランキングページの生成完了 ---")
-
 
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     base_path = "/nba-stats-media"
-    os.makedirs("output/teams", exist_ok=True)
-    os.makedirs("output/images", exist_ok=True)
-    os.makedirs("output/stats", exist_ok=True)
-    os.makedirs("output/logos", exist_ok=True)
-    os.makedirs("output/css", exist_ok=True)
-    os.makedirs("output/players", exist_ok=True)
-    os.makedirs("output/images/players", exist_ok=True)
-    os.makedirs("output/2023-24", exist_ok=True)
-    os.makedirs("output/2024-25", exist_ok=True)
-    os.makedirs("output/images/season_leaders", exist_ok=True)
-
+    os.makedirs("output/teams", exist_ok=True); os.makedirs("output/images", exist_ok=True); os.makedirs("output/stats", exist_ok=True); os.makedirs("output/logos", exist_ok=True); os.makedirs("output/css", exist_ok=True); os.makedirs("output/players", exist_ok=True); os.makedirs("output/images/players", exist_ok=True)
     print("出力ディレクトリの準備が完了しました。")
-
     df_23_24, df_24_25 = None, None
     try:
         df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv"); df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
@@ -378,7 +272,4 @@ if __name__ == "__main__":
     generate_stat_pages(df_23_24, df_24_25, env, base_path)
     generate_comparison_pages(df_23_24, df_24_25, df_players_24_25, video_data, env, player_team_map, base_path)
     generate_player_pages(env, scoring_timeline_data, df_players_23_24, df_players_24_25, player_team_map, base_path)
-    generate_season_player_index(env, base_path, '2024-25', df_players_24_25, df_players_23_24)
-    generate_season_player_index(env, base_path, '2023-24', df_players_23_24, df_players_24_25)
-
     print("\n--- すべての処理が完了しました ---")
