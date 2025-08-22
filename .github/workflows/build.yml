@@ -1,0 +1,46 @@
+name: Build and Deploy Site
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install matplotlib
+          pip install -r requirements.txt
+
+      - name: Fetch latest YouTube videos
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python3 get_youtube_data.py
+
+      - name: Fetch latest roster data
+        run: python3 get_roster_data.py
+
+      - name: Generate static HTML pages
+        run: python3 main.py
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
