@@ -1,10 +1,10 @@
 # data_acquisition/get_player_data.py
 
 import pandas as pd
-from bs4 import BeautifulSoup
 from io import StringIO
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 import time
 import unicodedata
 import re
@@ -13,7 +13,7 @@ def normalize_name(name):
     """選手名から特殊文字や接尾辞を除去して正規化する"""
     if not isinstance(name, str):
         return ""
-    name = "".join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
+    name = "".join(c for c in unicodedadata.normalize('NFKD', name) if not unicodedata.combining(c))
     name = re.sub(r'\s+(Jr|Sr|II|III|IV|V)\.?$', '', name, flags=re.IGNORECASE)
     return name.strip()
 
@@ -33,10 +33,8 @@ def fetch_player_stats(year, url):
         driver = webdriver.Chrome(options=options)
         driver.get(url)
 
-        # 「Show More」ボタンがなくなるまでクリックし続ける
         while True:
             try:
-                # ボタンが表示されるまで少し待つ
                 time.sleep(2)
                 show_more_button = driver.find_element(by=By.CSS_SELECTOR, value=".loadMore")
                 driver.execute_script("arguments[0].click();", show_more_button)
@@ -48,33 +46,37 @@ def fetch_player_stats(year, url):
         html = driver.page_source
         print("ページの全データ読み込みが完了しました。")
 
-        # ★★★ ここからデータ抽出ロジックを修正 ★★★
         all_tables = pd.read_html(StringIO(html), flavor='html5lib')
         
         if len(all_tables) < 2:
             raise ValueError("必要な選手スタッツのテーブルがページに見つかりませんでした。")
 
-        # ESPNのスタッツページは通常2つのテーブルに分かれている
         df_part1 = all_tables[0]
         df_part2 = all_tables[1]
-
-        # 2つのテーブルを水平に結合
         final_df = pd.concat([df_part1, df_part2], axis=1)
         
-        # 不要な列やヘッダー行をクリーンアップ
-        final_df.columns = final_df.columns.droplevel(0) # 複数レベルのヘッダーを単純化
-        final_df = final_df.drop('RK', axis=1) # RK列を削除
+        # ★★★ ここからデータ抽出ロジックを修正 ★★★
+        # 列名が不安定なため、列の位置（インデックス）で操作する
         
-        # Name列からチーム名を取得し、Player名をクリーンアップ
-        # 例: "Jalen Brunson, NYK" -> Player: "Jalen Brunson", Team: "NYK"
-        final_df['Team'] = final_df['Name'].apply(lambda x: x.split(', ')[-1] if ', ' in x else '')
-        final_df['Player'] = final_df['Name'].apply(lambda x: x.split(', ')[0])
-
-        # Player列の名前を正規化
+        # 2列目（インデックス1）に選手名とチーム名が含まれている
+        name_team_col = final_df.iloc[:, 1]
+        
+        # 選手名とチーム名を分離して新しい列を作成
+        final_df['Player'] = name_team_col.apply(lambda x: x.split(', ')[0])
+        final_df['Team'] = name_team_col.apply(lambda x: x.split(', ')[-1] if ', ' in x else '')
+        
+        # 選手名を正規化
         final_df['Player'] = final_df['Player'].apply(normalize_name)
         
-        # 不要になった元のName列を削除
-        final_df = final_df.drop('Name', axis=1)
+        # 元の不要な列（0列目のRKと1列目のName）を削除
+        final_df = final_df.drop(final_df.columns[[0, 1]], axis=1)
+
+        # statsの列名をクリーンアップ (例: ('GP', 'GP') -> 'GP')
+        final_df.columns = [col[1] if isinstance(col, tuple) else col for col in final_df.columns]
+        
+        # 列の順番を整理
+        cols_to_move = ['Player', 'Team']
+        final_df = final_df[cols_to_move + [col for col in final_df.columns if col not in cols_to_move]]
         # ★★★ データ抽出ロジックの修正ここまで ★★★
         
         file_path = f"player_stats_{season_str}.csv"
