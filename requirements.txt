@@ -1,11 +1,1 @@
-pandas
-jinja2
-matplotlib
-requests
-beautifulsoup4
-lxml
-selenium
-webdriver-manager
-google-api-python-client
-html5lib
-nba_api
+wheel==0.45.1
