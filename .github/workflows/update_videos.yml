@@ -30,17 +30,23 @@ jobs:
           pip install matplotlib
           pip install -r requirements.txt
 
-      # ★★★ パスを修正 ★★★
+      # ★★★ ここからデバッグ用ステップ ★★★
+      - name: Debug file structure
+        run: |
+          echo "--- 現在の作業ディレクトリ ---"
+          pwd
+          echo "--- ファイルとフォルダの一覧 ---"
+          ls -lA
+      # ★★★ ここまでデバッグ用ステップ ★★★
+
       - name: Fetch latest YouTube videos
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python3 get_youtube_data.py
 
-      # ★★★ パスを修正 ★★★
       - name: Fetch latest roster data
         run: python3 get_roster_data.py
       
-      # ★★★ パスを修正（もしこのステップを追加していた場合） ★★★
       - name: Fetch latest player data
         run: python3 get_player_data.py
 
