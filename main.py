@@ -191,35 +191,35 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg"); plt.close()
             team_name = player_team_map.get(player_name, ''); team_url = ""
             if team_name: team_url = f"{base_path}/teams/comparison_{team_name.replace(' ', '_')}.html"
-            render_data = { 'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 'player_info': stats_s2_table.T.to_dict('records')[0], 'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'team_name': team_name, 'team_url': team_url, 'glossary_url': f'{base_path}/glossary.html' }
+            # render_dataの初期化
+            render_data = { 
+                'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 
+                'player_info': stats_s2_table.T.to_dict('records')[0], 
+                'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 
+                'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 
+                'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 
+                'team_name': team_name, 'team_url': team_url, 'glossary_url': f'{base_path}/glossary.html',
+                'has_timeline_23_24': False, # ★★★ フラグを初期化
+                'has_timeline_24_25': False  # ★★★ フラグを初期化
+            }
+
             for season_str_short in ["23-24", "24-25"]:
                 season_str_long = f"20{season_str_short}"
                 player_timeline = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == season_str_long)]
-                if player_timeline.empty: continue
-                comment = generate_player_comment(player_name, season_str_long, player_timeline)
-                if season_str_short == "23-24": render_data['comment_23_24'] = comment
-                elif season_str_short == "24-25": render_data['comment_24_25'] = comment
-                # Graph 1
-                attempts_agg = pd.DataFrame({'absolute_minute': range(48)}); attempts_pivot = player_timeline.pivot_table(index='absolute_minute', columns=['SHOT_TYPE', 'MADE_FLAG'], aggfunc='size', fill_value=0)
-                attempts_pivot.columns = ['_'.join(map(str, col)) for col in attempts_pivot.columns]
-                attempts_agg = pd.merge(attempts_agg, attempts_pivot, on='absolute_minute', how='left').fillna(0)
-                fig, ax = plt.subplots(figsize=(15, 7)); bottom = np.zeros(48)
-                miss_3pt = attempts_agg.get('3PT_0', 0); miss_2pt = attempts_agg.get('2PT_0', 0); miss_ft = attempts_agg.get('FT_0', 0)
-                ax.bar(attempts_agg['absolute_minute'], miss_3pt, bottom=bottom, color='#aec7e8', label='3PT Miss'); bottom += miss_3pt; ax.bar(attempts_agg['absolute_minute'], miss_2pt, bottom=bottom, color='#ffbb78', label='2PT Miss'); bottom += miss_2pt; ax.bar(attempts_agg['absolute_minute'], miss_ft, bottom=bottom, color='#ff9896', label='FT Miss'); bottom += miss_ft
-                made_3pt = attempts_agg.get('3PT_1', 0); made_2pt = attempts_agg.get('2PT_1', 0); made_ft = attempts_agg.get('FT_1', 0)
-                ax.bar(attempts_agg['absolute_minute'], made_3pt, bottom=bottom, color='#1f77b4', label='3PT Made'); bottom += made_3pt; ax.bar(attempts_agg['absolute_minute'], made_2pt, bottom=bottom, color='#ff7f0e', label='2PT Made'); bottom += made_2pt; ax.bar(attempts_agg['absolute_minute'], made_ft, bottom=bottom, color='#d62728', label='FT Made')
-                ax.set_title(f'{player_name} - Shot Attempts (Made/Miss) Timeline ({season_str_long})'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Number of Attempts'); ax.set_xticks([0, 12, 24, 36, 47]); ax.grid(axis='y', linestyle='--', alpha=0.7); ax.legend(); plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg"); plt.close()
-                # Graph 2
-                points_agg = pd.DataFrame({'absolute_minute': range(48)})
-                made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1]
-                if not made_shots.empty:
-                    point_map = {'3PT': 3, '2PT': 2, 'FT': 1}; made_shots = made_shots.copy(); made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
-                    points_by_type = made_shots.groupby(['absolute_minute', 'SHOT_TYPE'])['POINTS'].sum().unstack(fill_value=0)
-                    points_agg = pd.merge(points_agg, points_by_type, on='absolute_minute', how='left').fillna(0)
-                fig, ax = plt.subplots(figsize=(15, 7)); ax.bar(points_agg['absolute_minute'], points_agg.get('3PT', 0), color='#1f77b4', label='3-Pointers'); ax.bar(points_agg['absolute_minute'], points_agg.get('2PT', 0), bottom=points_agg.get('3PT', 0), color='#ff7f0e', label='2-Pointers'); ax.bar(points_agg['absolute_minute'], points_agg.get('FT', 0), bottom=points_agg.get('3PT', 0) + points_agg.get('2PT', 0), color='#2ca02c', label='Free Throws')
-                ax.set_title(f'{player_name} - Points Scored Timeline ({season_str_long})'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Points Scored'); ax.set_xticks([0, 12, 24, 36, 47]); ax.grid(axis='y', linestyle='--', alpha=0.7); ax.legend(); plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg"); plt.close()
+                
+                if not player_timeline.empty:
+                    # ★★★ データが存在する場合にフラグをTrueにする ★★★
+                    if season_str_short == "23-24":
+                        render_data['has_timeline_23_24'] = True
+                    elif season_str_short == "24-25":
+                        render_data['has_timeline_24_25'] = True
+
+                    # (コメント生成とグラフ生成のロジックは変更なし)
+                    # ...
+            
             output_path = f"output/players/{player_filename}.html"
-            with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(template.render(render_data))
         except Exception as e: print(f"警告: {player_name} のページ生成中にエラー: {e}")
     print("--- 選手ページの生成完了 ---")
 

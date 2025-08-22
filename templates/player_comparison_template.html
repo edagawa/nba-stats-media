@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ player_name }} | 選手スタッツ比較</title>
     {% include '_gtm_head.html' %}
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="{{ base_path }}/css/style.css">
 </head>
 <body>
     {% include '_gtm_body.html' %}
     <header>
         <h1>{{ player_name }}</h1>
         <nav>
-            <a href="../index.html">トップページ</a>
+            <a href="{{ base_path }}/index.html">トップページ</a>
         </nav>
     </header>
     <div class="container">
         <main>
             <div class="breadcrumb">
-                <a href="../index.html">トップページ</a> &gt; <a href="{{ team_url }}">{{ team_name }}</a> &gt; <span>{{ player_name }}</span>
+                <a href="{{ base_path }}/index.html">トップページ</a> &gt; <a href="{{ team_url }}">{{ team_name }}</a> &gt; <span>{{ player_name }}</span>
             </div>
             <section class="team-profile">
                 <div class="team-details">
@@ -33,7 +33,7 @@
             <section class="comparison-graph">
                 <h3>主要指標の変化</h3>
                 <figure>
-                    <img src="../images/players/comparison_{{ player_filename }}.svg" alt="{{ player_name }} シーズン比較グラフ" onerror="this.style.display='none'">
+                    <img src="{{ base_path }}/images/players/comparison_{{ player_filename }}.svg" alt="{{ player_name }} シーズン比較グラフ" onerror="this.style.display='none'">
                 </figure>
             </section>
             <div class="seasons-container">
@@ -47,53 +47,55 @@
                 </div>
             </div>
 
+            {% if has_timeline_24_25 %}
             <section class="timeline-graph">
                 <h2>時間帯別得点パターン (2024-25)</h2>
-                <p class="graph-description">このグラフは、{{ player_name }}選手の2024-25シーズンにおける、試合中の時間経過に伴う得点の分布を示しています。どの時間帯に得点が多いか、得点パターンを視覚的に把握できます。</p>
+                <p class="graph-description">このグラフは、{{ player_name }}選手の2024-25シーズンにおける、試合中の時間経過に伴う得点の分布を示しています。</p>
                 <figure>
-                    <img id="points-24-25-graph" src="../images/players/timeline_points_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 得点タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
+                    <img id="points-24-25-graph" src="{{ base_path }}/images/players/timeline_points_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 得点タイムライン">
                 </figure>
                 <div class="player-comment">{{ comment_24_25 }}</div>
             </section>
-
+            
             <section class="timeline-graph">
                 <h2>時間帯別シュート試投（成功／失敗） (2024-25)</h2>
-                <p class="graph-description">このグラフは、{{ player_name }}選手の2024-25シーズンにおける、試合中の時間経過に伴うシュートの試投数と成功・失敗の内訳を示しています。得意な時間帯や、タフショットが多い時間帯などを分析できます。</p>
+                <p class="graph-description">このグラフは、{{ player_name }}選手の2024-25シーズンにおける、シュートの試投数と成功・失敗の内訳を示しています。</p>
                 <figure>
-                    <img id="attempts-24-25-graph" src="../images/players/timeline_attempts_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 シュート機会タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
+                    <img id="attempts-24-25-graph" src="{{ base_path }}/images/players/timeline_attempts_24-25_{{ player_filename }}.svg" alt="{{ player_name }} 2024-25 シュート機会タイムライン">
                 </figure>
                 <div class="player-comment">{{ comment_24_25 }}</div>
             </section>
+            {% endif %}
 
+            {% if has_timeline_23_24 %}
             <section class="timeline-graph">
                 <h2>時間帯別得点パターン (2023-24)</h2>
                 <p class="graph-description">このグラフは、{{ player_name }}選手の2023-24シーズンにおける、試合中の時間経過に伴う得点の分布を示しています。</p>
                 <figure>
-                    <img id="points-23-24-graph" src="../images/players/timeline_points_23-24_{{ player_filename }}.svg" alt="{{ player_name }} 2023-24 得点タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
+                    <img id="points-23-24-graph" src="{{ base_path }}/images/players/timeline_points_23-24_{{ player_filename }}.svg" alt="{{ player_name }} 2023-24 得点タイムライン">
                 </figure>
                 <div class="player-comment">{{ comment_23_24 }}</div>
             </section>
             
             <section class="timeline-graph">
                 <h2>時間帯別シュート試投（成功／失敗） (2023-24)</h2>
-                <p class="graph-description">このグラフは、{{ player_name }}選手の2023-24シーズンにおける、試合中の時間経過に伴うシュートの試投数と成功・失敗の内訳を示しています。</p>
+                <p class="graph-description">このグラフは、{{ player_name }}選手の2023-24シーズンにおける、シュートの試投数と成功・失敗の内訳を示しています。</p>
                 <figure>
-                    <img id="attempts-23-24-graph" src="../images/players/timeline_attempts_23-24_{{ player_filename }}.svg" alt="{{ player_name }} 2023-24 シュート機会タイムライン" onerror="this.style.display='none'; this.parentElement.parentElement.style.display='none';">
+                    <img id="attempts-23-24-graph" src="{{ base_path }}/images/players/timeline_attempts_23-24_{{ player_filename }}.svg" alt="{{ player_name }} 2023-24 シュート機会タイムライン">
                 </figure>
                 <div class="player-comment">{{ comment_23_24 }}</div>
             </section>
-            
+            {% endif %}
             <div id="graphModal" class="modal">
                 <div class="modal-content">
                     <span class="close-button">&times;</span>
                     <img id="modalImage" src="" alt="拡大グラフ">
                 </div>
             </div>
-            </main>
+        </main>
     </div>
     {% include 'footer.html' %}
     
-    <script src="../js/modal.js"></script>
-
+    <script src="{{ base_path }}/js/modal.js"></script>
 </body>
 </html>
