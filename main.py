@@ -64,6 +64,7 @@ def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1,
             top_5_teams = df_teams_merged.sort_values(by=stat_key_s2, ascending=sort_asc).head(5)
             team_data_list = [{'Team': row['Team'], 'url': f"{base_path}/teams/comparison_{row['Team'].replace(' ', '_')}.html", 'value': row[stat_key_s2], 'change': row[stat_key_change]} for _, row in top_5_teams.iterrows()]
             top_teams_by_stat[name] = {'data': team_data_list, 'url': f"{base_path}/stats/{stat.replace('%', '_PCT').replace(' ', '_')}.html"}
+            
     top_players_by_stat = {}
     player_stats_to_show = {'PTS': '得点', 'REB': 'リバウンド', 'AST': 'アシスト'}
     if df_players_s1 is not None and df_players_s2 is not None:
@@ -71,15 +72,35 @@ def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1,
         for stat, name in player_stats_to_show.items():
             stat_key_s2, stat_key_s1, stat_key_change = f'{stat}_s2', f'{stat}_s1', f'{stat}_change'
             for col in [stat_key_s1, stat_key_s2]: df_players_merged[col] = pd.to_numeric(df_players_merged[col], errors='coerce')
-            df_players_merged[stat_key_change] = df_players_merged[stat_key_s2] - df_players_merged[stat_key_s1]
+            df_players_merged[stat_key_change] = df_players_merged[stat_key_s2] - df_players_merged[stat_key_s1].fillna(0)
             top_5_players = df_players_merged.sort_values(by=stat_key_s2, ascending=False).head(5)
-            player_data_list = [{'Player': row['Player'], 'url': f"{base_path}/players/{re.sub(r'[\\/*?:\"<>|]', '', row['Player']).replace(' ', '_')}.html", 'value': row[stat_key_s2], 'change': row[stat_key_change]} for _, row in top_5_players.iterrows()]
+            
+            # ★★★ ここから修正 ★★★
+            # f-stringの制約を回避するため、一行の複雑な処理を分かりやすいループに分割
+            player_data_list = []
+            for _, row in top_5_players.iterrows():
+                # 先にファイル名を生成
+                player_filename = re.sub(r'[\\/*?:"<>|]', '', row['Player']).replace(' ', '_')
+                # その後、シンプルな変数としてf-stringに埋め込む
+                player_url = f"{base_path}/players/{player_filename}.html"
+                
+                player_data_list.append({
+                    'Player': row['Player'], 
+                    'url': player_url, 
+                    'value': row[stat_key_s2], 
+                    'change': row[stat_key_change]
+                })
+            # ★★★ ここまで修正 ★★★
+
             top_players_by_stat[name] = {'data': player_data_list, 'url': f"{base_path}/2024-25/index.html"}
+
     main_video_id = video_data.get("NBA_MAIN")
     main_video_embed_url = f"https://www.youtube.com/embed/{main_video_id}" if main_video_id else None
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
     render_data = {'base_path': base_path, 'top_teams_by_stat': top_teams_by_stat, 'top_players_by_stat': top_players_by_stat, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html', 'main_video_embed_url': main_video_embed_url}
-    with open("output/index.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
+    
+    with open("output/index.html", "w", encoding="utf-8") as f:
+        f.write(template.render(render_data))
     print("--- トップページの生成完了 ---")
 
 def generate_glossary_page(env, base_path):
