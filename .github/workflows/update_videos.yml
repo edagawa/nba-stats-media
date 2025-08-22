@@ -21,6 +21,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      # ★★★ ここにステップを追加 ★★★
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -30,7 +34,7 @@ jobs:
       - name: Fetch latest YouTube videos
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: python3 get_youtube_data.py
+        run: python3 data_acquisition/get_youtube_data.py
 
       - name: Fetch latest roster data
         run: python3 data_acquisition/get_roster_data.py
