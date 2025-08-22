@@ -32,6 +32,9 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python3 get_youtube_data.py
 
+      - name: Fetch latest roster data
+        run: python3 data_acquisition/get_roster_data.py
+
       - name: Generate static HTML pages
         run: python3 main.py
 
