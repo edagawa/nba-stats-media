@@ -4,13 +4,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from io import StringIO
 from selenium import webdriver
-# ▼▼▼ 削除 ▼▼▼ (古いツールは使わない)
-# from selenium.webdriver.chrome.service import Service
-# from webdriver_manager.chrome import ChromeDriverManager
-# ▲▲▲ 削除 ▲▲▲
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 import time
 import unicodedata
 import re
@@ -29,7 +23,6 @@ def fetch_player_stats(year, url):
     print(f"URL: {url}")
 
     options = webdriver.ChromeOptions()
-    # ★★★ 修正点 ★★★: サーバーで動かすためにヘッドレスモードを有効化
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
@@ -37,61 +30,52 @@ def fetch_player_stats(year, url):
     
     driver = None
     try:
-        # ★★★ 修正点 ★★★: 古い webdriver-manager を使わず、seleniumに任せる
         driver = webdriver.Chrome(options=options)
-        
         driver.get(url)
 
-        # ... (以降の処理は変更なし) ...
+        # 「Show More」ボタンがなくなるまでクリックし続ける
         while True:
             try:
-                show_more_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, ".loadMore"))
-                )
+                # ボタンが表示されるまで少し待つ
+                time.sleep(2)
+                show_more_button = driver.find_element(by=By.CSS_SELECTOR, value=".loadMore")
                 driver.execute_script("arguments[0].click();", show_more_button)
                 print("「Show More」ボタンをクリックしました。")
-                time.sleep(2)
             except Exception:
                 print("「Show More」ボタンが見つからないか、クリックが完了しました。")
                 break
         
         html = driver.page_source
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        print("ページの全データ読み込みと解析が完了しました。")
+        print("ページの全データ読み込みが完了しました。")
 
+        # ★★★ ここからデータ抽出ロジックを修正 ★★★
         all_tables = pd.read_html(StringIO(html), flavor='html5lib')
         
-        # ESPNの統計ページはテーブルが2つあることが多い（選手情報とスタッツ本体）
         if len(all_tables) < 2:
-            raise ValueError("必要なテーブルがページに見つかりませんでした。")
+            raise ValueError("必要な選手スタッツのテーブルがページに見つかりませんでした。")
 
-        player_info_df = all_tables[0]
-        player_stats_df = all_tables[1]
-        
-        # 選手名とチーム情報を別途取得
-        player_names = [a.text for a in soup.select('a.AnchorLink[data-player-uid]')]
-        player_teams = [span.text for span in soup.select('span.pl2.ns10.athleteCell__teamAbbrev')]
+        # ESPNのスタッツページは通常2つのテーブルに分かれている
+        df_part1 = all_tables[0]
+        df_part2 = all_tables[1]
 
-        # ヘッダー行がデータとして読み込まれる場合があるため調整
-        if len(player_names) != len(player_info_df):
-            player_info_df = player_info_df.iloc[1:]
+        # 2つのテーブルを水平に結合
+        final_df = pd.concat([df_part1, df_part2], axis=1)
+        
+        # 不要な列やヘッダー行をクリーンアップ
+        final_df.columns = final_df.columns.droplevel(0) # 複数レベルのヘッダーを単純化
+        final_df = final_df.drop('RK', axis=1) # RK列を削除
+        
+        # Name列からチーム名を取得し、Player名をクリーンアップ
+        # 例: "Jalen Brunson, NYK" -> Player: "Jalen Brunson", Team: "NYK"
+        final_df['Team'] = final_df['Name'].apply(lambda x: x.split(', ')[-1] if ', ' in x else '')
+        final_df['Player'] = final_df['Name'].apply(lambda x: x.split(', ')[0])
 
-        # 最終的な数合わせとエラーチェック
-        if len(player_names) != len(player_info_df):
-             raise ValueError(f"選手名リスト({len(player_names)})と情報テーブル({len(player_info_df)})の数が一致しません。")
-        
-        player_info_df['Player'] = player_names
-        player_info_df['TeamAbbrev'] = player_teams
-        
-        player_info_df = player_info_df[['Player', 'TeamAbbrev']]
-        player_stats_df = player_stats_df.drop(player_stats_df.columns[0], axis=1)
-
-        final_df = pd.concat([player_info_df.reset_index(drop=True), player_stats_df.reset_index(drop=True)], axis=1)
-        
-        final_df.rename(columns={'TeamAbbrev': 'Team'}, inplace=True)
-        
+        # Player列の名前を正規化
         final_df['Player'] = final_df['Player'].apply(normalize_name)
+        
+        # 不要になった元のName列を削除
+        final_df = final_df.drop('Name', axis=1)
+        # ★★★ データ抽出ロジックの修正ここまで ★★★
         
         file_path = f"player_stats_{season_str}.csv"
         final_df.to_csv(file_path, index=False)
@@ -105,5 +89,4 @@ def fetch_player_stats(year, url):
 
 if __name__ == "__main__":
     fetch_player_stats(2024, "https://www.espn.com/nba/stats/player/_/season/2024/seasontype/2")
-    # 2025年のURLは最新シーズンを指すように修正
     fetch_player_stats(2025, "https://www.espn.com/nba/stats/player")
