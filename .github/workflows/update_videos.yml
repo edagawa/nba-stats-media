@@ -1,11 +1,11 @@
-name: Update Latest YouTube Videos Weekly
+name: Build and Deploy NBA Stats Media
 
 on:
   # mainブランチにプッシュされた時に実行
   push:
     branches:
       - main
-      - master # 古い形式のブランチ名にも対応
+      - master
 
   # 日本時間の毎週金曜 午前9時に実行
   schedule:
@@ -15,16 +15,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  update-and-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       # 1. リポジトリのコードをチェックアウト
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2. Python環境のセットアップ
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -44,12 +44,9 @@ jobs:
       - name: Generate static HTML pages
         run: python3 main.py
 
-      # 6. 変更をコミットしてプッシュ
-      - name: Commit and push changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add -A
-          # 変更があった場合のみコミット・プッシュする
-          git diff-index --quiet HEAD || git commit -m "update: refresh latest youtube videos"
-          git push
+      # 6. ★★★ 変更点 ★★★ サイトをGitHub Pagesにデプロイ
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
