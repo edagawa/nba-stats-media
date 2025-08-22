@@ -223,6 +223,78 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         except Exception as e: print(f"警告: {player_name} のページ生成中にエラー: {e}")
     print("--- 選手ページの生成完了 ---")
 
+def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
+    """シーズン別の選手ランキングページを、トップ10ランキングとグラフを含めて生成する"""
+    print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
+    if df_current is None or df_previous is None:
+        print(f"警告: {season_str}シーズンの選手データが不足しているため、ページを生成できません。")
+        return
+
+    template = env.get_template('season_player_index_template.html')
+    
+    player_stats_to_show = {
+        'PTS': {'jp': '得点', 'en': 'Points'}, 
+        'REB': {'jp': 'リバウンド', 'en': 'Rebounds'}, 
+        'AST': {'jp': 'アシスト', 'en': 'Assists'}, 
+        'STL': {'jp': 'スティール', 'en': 'Steals'}, 
+        'BLK': {'jp': 'ブロック', 'en': 'Blocks'}
+    }
+    
+    current_year_short = season_str.split('-')[0]
+    previous_year_short = str(int(current_year_short) - 1)
+    previous_season_str = f"{previous_year_short}-{current_year_short[2:]}"
+    
+    df_merged = pd.merge(df_current, df_previous, on='Player', how='left', suffixes=('_current', '_previous'))
+    leaders_with_graphs = []
+
+    for stat, names in player_stats_to_show.items():
+        name_jp = names['jp']
+        name_en = names['en']
+
+        stat_key_current = f'{stat}_current'; stat_key_previous = f'{stat}_previous'; stat_key_change = f'{stat}_change'
+        for col in [stat_key_current, stat_key_previous]:
+            df_merged[col] = pd.to_numeric(df_merged[col], errors='coerce')
+        df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
+        top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
+
+        plt.style.use('seaborn-v0_8-talk')
+        fig, ax = plt.subplots(figsize=(10, 8))
+        y = np.arange(len(top_10_players))
+        height = 0.4
+        players_reversed = top_10_players.iloc[::-1]
+
+        ax.barh(y - height/2, players_reversed[stat_key_previous], height, label=previous_season_str)
+        ax.barh(y + height/2, players_reversed[stat_key_current], height, label=season_str)
+
+        ax.set_xlabel(name_en)
+        ax.set_ylabel('Player')
+        ax.set_title(f'Top 10 {name_en} Leaders ({season_str} Season)')
+        ax.set_yticks(y)
+        ax.set_yticklabels(players_reversed['Player'])
+        ax.legend()
+        fig.tight_layout()
+        
+        graph_filename = f"{season_str}_{stat}.svg"
+        graph_path = f"output/images/season_leaders/{graph_filename}"
+        plt.savefig(graph_path, format="svg")
+        plt.close(fig)
+        
+        player_data_list = [{'Player': row['Player'], 'url': f"{base_path}/players/{player_filename}.html", 'value': row[stat_key_current], 'change': row[stat_key_change]} for _, row in top_10_players.iterrows() for player_filename in [re.sub(r'[\\/*?:"<>|]', "", row['Player']).replace(' ', '_')]]
+
+        leaders_with_graphs.append({
+            'stat_en': stat,
+            'stat_jp': name_jp,
+            'data': player_data_list,
+            'graph_url': f"{base_path}/images/season_leaders/{graph_filename}"
+        })
+
+    stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
+    render_data = {'base_path': base_path, 'season_str': season_str, 'leaders_with_graphs': leaders_with_graphs, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html'}
+    output_path = f"output/{season_str}/index.html"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(template.render(render_data))
+    print(f"--- {season_str}シーズン 選手ランキングページの生成完了 ---")
+
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     
