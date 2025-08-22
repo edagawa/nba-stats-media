@@ -1,17 +1,12 @@
 name: Build and Deploy NBA Stats Media
 
 on:
-  # mainブランチにプッシュされた時に実行
   push:
     branches:
       - main
       - master
-
-  # 日本時間の毎週金曜 午前9時に実行
   schedule:
     - cron: '0 0 * * 5'
-  
-  # 手動でも実行できるようにする
   workflow_dispatch:
 
 jobs:
@@ -44,7 +39,11 @@ jobs:
       - name: Generate static HTML pages
         run: python3 main.py
 
-      # 6. ★★★ 変更点 ★★★ サイトをGitHub Pagesにデプロイ
+      # ★★★ デバッグ用に追加 ★★★
+      - name: Check for output directory
+        run: ls -R
+
+      # 6. サイトをGitHub Pagesにデプロイ
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
