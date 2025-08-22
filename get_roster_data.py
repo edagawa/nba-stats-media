@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 import time
 import unicodedata
 import re
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 def normalize_name(name):
     """選手名から特殊文字や接尾辞を除去して正規化する"""
@@ -51,28 +52,45 @@ def create_player_team_map():
     """全チームのロスターページをスクレイピングし、選手とチームの対応表CSVを作成する"""
     player_team_list = []
     
-    print("--- 全チームのロスターデータを取得しています ---")
-    for team_name, url in TEAM_ROSTER_URLS.items():
-        try:
-            print(f"処理中: {team_name}")
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-            response = requests.get(url, headers=headers)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # 選手名が含まれるリンク要素をすべて取得
-            player_links = soup.select('a[href*="player/_/id/"]')
-            
-            for link in player_links:
-                player_name = link.get_text(strip=True)
-                # "Two-Way"などの不要なテキストを除外
-                if player_name and not any(char.isdigit() for char in player_name):
-                    normalized_name = normalize_name(player_name)
-                    player_team_list.append({'Player': normalized_name, 'Team': team_name})
-            
-            time.sleep(1) # サーバーへの負荷を考慮
+    # SeleniumのWebDriverをヘッドレスモードで設定
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(options=chrome_options)
 
-        except Exception as e:
-            print(f"エラー: {team_name} の処理中に問題が発生しました: {e}")
+    print("--- 全チームのロスターデータを取得しています ---")
+    try:
+        for team_name, url in TEAM_ROSTER_URLS.items():
+            try:
+                print(f"処理中: {team_name}")
+                driver.get(url)
+                # ページが読み込まれるのを待つ
+                time.sleep(3) 
+
+                # ページ全体のHTMLを取得
+                html = driver.page_source
+                # pandasでHTMLテーブルを読み込む
+                tables = pd.read_html(html)
+                
+                # ESPNのロスターページには通常2つのテーブルがある（RosterとCoaching Staff）
+                if len(tables) > 0:
+                    roster_df = tables[0] # 最初のテーブルが選手ロスター
+                    # 'name'列から選手名を取得
+                    for player_name in roster_df['Name']:
+                        # 年齢などの数字部分を削除
+                        cleaned_name = ''.join([i for i in player_name if not i.isdigit()])
+                        normalized_name = normalize_name(cleaned_name)
+                        if normalized_name:
+                            player_team_list.append({'Player': normalized_name, 'Team': team_name})
+                else:
+                    print(f"警告: {team_name} のページで選手テーブルが見つかりませんでした。")
+
+            except Exception as e:
+                print(f"エラー: {team_name} の処理中に問題が発生しました: {e}")
+    
+    finally:
+        driver.quit() # ブラウザを閉じる
             
     # DataFrameに変換し、重複を削除
     player_team_df = pd.DataFrame(player_team_list).drop_duplicates()
