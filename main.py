@@ -1,4 +1,4 @@
-# main.py (最終確定版)
+# main.py (修正版)
 
 import os
 import sys
@@ -149,10 +149,11 @@ def generate_stat_pages(df_s1, df_s2, env, base_path):
 
 def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map, base_path):
     print("--- 選手ページの生成開始 ---")
-    if df_s1_raw is None or df_s2_raw is None: return
+    if df_s1_raw is None or df_s2_raw is None:
+        print("警告: 選手データファイルが見つからないため、選手ページをスキップします。")
+        return
 
     def generate_player_comment(player_name, season_str_long, player_season_timeline):
-        # ... (この内側の関数は変更なし) ...
         if player_season_timeline.empty: return f"{player_name}選手の{season_str_long}シーズンの詳細な得点データはありません。"
         point_map = {'3PT': 3, '2PT': 2, 'FT': 1}; made_shots = player_season_timeline[player_season_timeline['MADE_FLAG'] == 1].copy()
         if made_shots.empty: return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
@@ -169,7 +170,7 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         elif best_quarter == 1 and (q1_points / total_points) > 0.3: comment_parts.append(f"{player_name}選手は、試合序盤から積極的に得点を狙うスタートダッシュ型の選手です。")
         else: comment_parts.append(f"{player_name}選手は、シーズンを通して安定したパフォーマンスを見せ、特に第{best_quarter}クォーターで最も多くの得点を記録しています。")
         comment_parts.append(f"強みは{primary_style}です。"); return " ".join(comment_parts)
-    
+
     df_merged = pd.merge(df_s2_raw, df_s1_raw, on='Player', how='left', suffixes=('_s2', '_s1'))
     template = env.get_template('player_comparison_template.html')
     stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
@@ -179,23 +180,15 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         player_name = player_data.get('Player', 'Unknown')
         try:
             player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
+            
+            has_s1_data = pd.notna(player_data.get('PTS_s1'))
+
             stats_s2_table = pd.DataFrame(player_data.filter(like='_s2')).rename(index=lambda x: x.replace('_s2', ''))
             stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
-            
-            # --- 比較グラフの生成 ---
-            graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
-            graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
-            graph_stats_s2 = graph_stats_s2_series.fillna(0).values; graph_stats_s1 = graph_stats_s1_series.fillna(0).values
-            x = np.arange(len(stats_to_compare)); width = 0.35
-            fig, ax = plt.subplots(figsize=(10, 6)); ax.bar(x - width/2, graph_stats_s1, width, label='2023-24'); ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
-            ax.set_ylabel('Value'); ax.set_title(f'Key Stats Comparison: {player_name}'); ax.set_xticks(x); ax.set_xticklabels(stats_to_compare); ax.legend(); fig.tight_layout()
-            plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg"); plt.close(fig)
             
             team_name = player_team_map.get(player_name, ''); team_url = ""
             if team_name: team_url = f"{base_path}/teams/comparison_{team_name.replace(' ', '_')}.html"
             
-            # ★★★ ここから修正 ★★★
-            # テンプレートに渡すrender_dataを初期化。フラグもここで初期設定
             render_data = { 
                 'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 
                 'player_info': stats_s2_table.T.to_dict('records')[0], 
@@ -204,50 +197,74 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 
                 'team_name': team_name, 'team_url': team_url, 
                 'glossary_url': f'{base_path}/glossary.html',
-                'has_timeline_23_24': False, # 条件分岐用の変数を初期化
-                'has_timeline_24_25': False  # 条件分岐用の変数を初期化
+                'has_s1_data': has_s1_data,
+                'has_timeline_23_24': False,
+                'has_timeline_24_25': False
             }
 
-            # タイムラインデータがあるシーズンだけ、グラフ生成とフラグ設定を行う
+            if has_s1_data:
+                graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
+                graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
+                graph_stats_s2 = graph_stats_s2_series.fillna(0).values
+                graph_stats_s1 = graph_stats_s1_series.fillna(0).values
+                x = np.arange(len(stats_to_compare)); width = 0.35
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.bar(x - width/2, graph_stats_s1, width, label='2023-24')
+                ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
+                ax.set_ylabel('Value'); ax.set_title(f'Key Stats Comparison: {player_name}')
+                ax.set_xticks(x); ax.set_xticklabels(stats_to_compare); ax.legend(); fig.tight_layout()
+                plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
+                plt.close(fig)
+
             for season_str_short in ["23-24", "24-25"]:
                 season_str_long = f"20{season_str_short}"
                 player_timeline = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == season_str_long)]
+                if player_timeline.empty: continue
                 
-                # データがなければ、このシーズンの処理はスキップ
-                if player_timeline.empty:
-                    continue
-                
-                # データがあったので、対応するフラグをTrueにする
+                # ★★★ ここから修正・追加 ★★★
                 if season_str_short == "23-24":
                     render_data['has_timeline_23_24'] = True
                     render_data['comment_23_24'] = generate_player_comment(player_name, season_str_long, player_timeline)
                 elif season_str_short == "24-25":
                     render_data['has_timeline_24_25'] = True
                     render_data['comment_24_25'] = generate_player_comment(player_name, season_str_long, player_timeline)
-
-                # --- タイムライングラフの生成処理 ---
-                # (ここに以前あったグラフ生成コードを戻します)
-                # Graph 1: Attempts
-                attempts_agg = pd.DataFrame({'absolute_minute': range(48)}); attempts_pivot = player_timeline.pivot_table(index='absolute_minute', columns=['SHOT_TYPE', 'MADE_FLAG'], aggfunc='size', fill_value=0)
-                attempts_pivot.columns = ['_'.join(map(str, col)) for col in attempts_pivot.columns]
-                attempts_agg = pd.merge(attempts_agg, attempts_pivot, on='absolute_minute', how='left').fillna(0)
-                fig_attempts, ax_attempts = plt.subplots(figsize=(15, 7)); bottom = np.zeros(48)
-                miss_3pt = attempts_agg.get('3PT_0', 0); miss_2pt = attempts_agg.get('2PT_0', 0); miss_ft = attempts_agg.get('FT_0', 0)
-                ax_attempts.bar(attempts_agg['absolute_minute'], miss_3pt, bottom=bottom, color='#aec7e8', label='3PT Miss'); bottom += miss_3pt; ax_attempts.bar(attempts_agg['absolute_minute'], miss_2pt, bottom=bottom, color='#ffbb78', label='2PT Miss'); bottom += miss_2pt; ax_attempts.bar(attempts_agg['absolute_minute'], miss_ft, bottom=bottom, color='#ff9896', label='FT Miss'); bottom += miss_ft
-                made_3pt = attempts_agg.get('3PT_1', 0); made_2pt = attempts_agg.get('2PT_1', 0); made_ft = attempts_agg.get('FT_1', 0)
-                ax_attempts.bar(attempts_agg['absolute_minute'], made_3pt, bottom=bottom, color='#1f77b4', label='3PT Made'); bottom += made_3pt; ax_attempts.bar(attempts_agg['absolute_minute'], made_2pt, bottom=bottom, color='#ff7f0e', label='2PT Made'); bottom += made_2pt; ax_attempts.bar(attempts_agg['absolute_minute'], made_ft, bottom=bottom, color='#d62728', label='FT Made')
-                ax_attempts.set_title(f'{player_name} - Shot Attempts (Made/Miss) Timeline ({season_str_long})'); ax_attempts.set_xlabel('Game Minute'); ax_attempts.set_ylabel('Number of Attempts'); ax_attempts.set_xticks([0, 12, 24, 36, 47]); ax_attempts.grid(axis='y', linestyle='--', alpha=0.7); ax_attempts.legend(); plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg"); plt.close(fig_attempts)
                 
-                # Graph 2: Points
-                points_agg = pd.DataFrame({'absolute_minute': range(48)})
-                made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1]
+                # タイムライングラフ1: 累積得点
+                made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1].copy()
                 if not made_shots.empty:
-                    point_map = {'3PT': 3, '2PT': 2, 'FT': 1}; made_shots = made_shots.copy(); made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
-                    points_by_type = made_shots.groupby(['absolute_minute', 'SHOT_TYPE'])['POINTS'].sum().unstack(fill_value=0)
-                    points_agg = pd.merge(points_agg, points_by_type, on='absolute_minute', how='left').fillna(0)
-                fig_points, ax_points = plt.subplots(figsize=(15, 7)); ax_points.bar(points_agg['absolute_minute'], points_agg.get('3PT', 0), color='#1f77b4', label='3-Pointers'); ax_points.bar(points_agg['absolute_minute'], points_agg.get('2PT', 0), bottom=points_agg.get('3PT', 0), color='#ff7f0e', label='2-Pointers'); ax_points.bar(points_agg['absolute_minute'], points_agg.get('FT', 0), bottom=points_agg.get('3PT', 0) + points_agg.get('2PT', 0), color='#2ca02c', label='Free Throws')
-                ax_points.set_title(f'{player_name} - Points Scored Timeline ({season_str_long})'); ax_points.set_xlabel('Game Minute'); ax_points.set_ylabel('Points Scored'); ax_points.set_xticks([0, 12, 24, 36, 47]); ax_points.grid(axis='y', linestyle='--', alpha=0.7); ax_points.legend(); plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg"); plt.close(fig_points)
-            # ★★★ 修正ここまで ★★★
+                    point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
+                    made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
+                    made_shots_sorted = made_shots.sort_values('absolute_minute')
+                    made_shots_sorted['CUM_POINTS'] = made_shots_sorted['POINTS'].cumsum()
+                    
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    ax.plot(made_shots_sorted['absolute_minute'], made_shots_sorted['CUM_POINTS'], marker='o', linestyle='-')
+                    ax.set_title(f'{player_name} Scoring Timeline ({season_str_long})')
+                    ax.set_xlabel('Game Minute'); ax.set_ylabel('Cumulative Points')
+                    ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
+                    ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
+                    plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg")
+                    plt.close(fig)
+
+                # タイムライングラフ2: シュート試投
+                shots_made = player_timeline[player_timeline['MADE_FLAG'] == 1]
+                shots_missed = player_timeline[player_timeline['MADE_FLAG'] == 0]
+                shot_type_y_map = {'3PT': 3, '2PT': 2, 'FT': 1}
+
+                fig, ax = plt.subplots(figsize=(10, 6))
+                if not shots_made.empty:
+                    ax.scatter(shots_made['absolute_minute'], shots_made['SHOT_TYPE'].map(shot_type_y_map), c='blue', label='Made', alpha=0.7)
+                if not shots_missed.empty:
+                    ax.scatter(shots_missed['absolute_minute'], shots_missed['SHOT_TYPE'].map(shot_type_y_map), c='red', marker='x', label='Missed', alpha=0.7)
+
+                ax.set_title(f'{player_name} Shot Attempts ({season_str_long})')
+                ax.set_xlabel('Game Minute'); ax.set_ylabel('Shot Type')
+                ax.set_yticks(list(shot_type_y_map.values())); ax.set_yticklabels(list(shot_type_y_map.keys()))
+                ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
+                ax.legend(); ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
+                plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg")
+                plt.close(fig)
+                # ★★★ 修正・追加ここまで ★★★
 
             output_path = f"output/players/{player_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
@@ -259,7 +276,15 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
 
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
     print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
-    if df_current is None or df_previous is None: return
+    if df_current is None:
+        print(f"警告: {season_str}の選手データがないため、ランキングページをスキップします。")
+        return
+    # 前シーズンデータがない場合も処理を継続するため、Noneチェックを修正
+    if df_previous is None:
+        print(f"警告: 前シーズンの選手データが見つかりません。比較なしで {season_str} のランキングを生成します。")
+        # 空のDataFrameを作成してエラーを回避
+        df_previous = pd.DataFrame(columns=df_current.columns)
+
     template = env.get_template('season_player_index_template.html')
     player_stats_to_show = {'PTS': {'jp': '得点', 'en': 'Points'}, 'REB': {'jp': 'リバウンド', 'en': 'Rebounds'}, 'AST': {'jp': 'アシスト', 'en': 'Assists'}, 'STL': {'jp': 'スティール', 'en': 'Steals'}, 'BLK': {'jp': 'ブロック', 'en': 'Blocks'}}
     current_year_short = season_str.split('-')[0]; previous_year_short = str(int(current_year_short) - 1); previous_season_str = f"{previous_year_short}-{current_year_short[2:]}"
@@ -291,7 +316,6 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
 
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
-    # ★★★ ここで正しいパスを定義 ★★★
     base_path = "/nba-stats-media"
     
     os.makedirs("output/teams", exist_ok=True); os.makedirs("output/images", exist_ok=True); os.makedirs("output/stats", exist_ok=True); os.makedirs("output/logos", exist_ok=True); os.makedirs("output/css", exist_ok=True); os.makedirs("output/players", exist_ok=True); os.makedirs("output/images/players", exist_ok=True); os.makedirs("output/2023-24", exist_ok=True); os.makedirs("output/2024-25", exist_ok=True); os.makedirs("output/images/season_leaders", exist_ok=True)
@@ -303,15 +327,24 @@ if __name__ == "__main__":
         df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP); df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']; df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
         df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False); df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False); df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True)
-    except FileNotFoundError: sys.exit(1)
+    except FileNotFoundError as e:
+        print(f"エラー: チーム統計ファイルが見つかりません: {e}")
+        sys.exit(1)
     
     df_players_23_24, df_players_24_25, player_team_map = None, None, {}
     try:
         df_players_23_24 = pd.read_csv("player_stats_2023-24.csv"); df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
+    except FileNotFoundError:
+        print("警告: 2023-24シーズンの選手データファイルが見つかりません。")
+    try:
         df_players_24_25 = pd.read_csv("player_stats_2024-25.csv"); df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
+    except FileNotFoundError:
+        print("警告: 2024-25シーズンの選手データファイルが見つかりません。")
+    try:
         roster_df = pd.read_csv("player_team_map.csv"); roster_df['Player'] = roster_df['Player'].apply(normalize_name)
         player_team_map = pd.Series(roster_df.Team.values, index=roster_df.Player).to_dict()
-    except FileNotFoundError: pass
+    except FileNotFoundError:
+        print("警告: 選手チーム対応ファイル(player_team_map.csv)が見つかりません。")
 
     try:
         with open('youtube_videos.json', 'r') as f: video_data = json.load(f)
@@ -320,7 +353,9 @@ if __name__ == "__main__":
     try:
         scoring_timeline_data = pd.read_csv('player_scoring_timeline.csv')
         scoring_timeline_data['Player'] = scoring_timeline_data['Player'].apply(normalize_name)
-    except FileNotFoundError: scoring_timeline_data = pd.DataFrame()
+    except FileNotFoundError:
+        print("警告: スコアリングタイムラインデータが見つかりません。")
+        scoring_timeline_data = pd.DataFrame()
 
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
