@@ -1,4 +1,4 @@
-# main.py (修正版)
+# main.py (デバッグログ強化版)
 
 import os
 import sys
@@ -51,7 +51,7 @@ def get_footer_data(base_path):
     return stat_pages, all_teams_structured
 
 def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1, df_players_s2, video_data):
-    print("--- トップページの生成開始 ---")
+    print("\n--- [DEBUG] トップページの生成開始 ---")
     template = env.get_template('index_template.html')
     top_teams_by_stat = {}
     team_stats_to_show = {'OFF EFF': 'オフェンス効率', 'DEF EFF': 'ディフェンス効率', 'PACE': 'ペース'}
@@ -84,19 +84,19 @@ def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1,
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
     render_data = {'base_path': base_path, 'top_teams_by_stat': top_teams_by_stat, 'top_players_by_stat': top_players_by_stat, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html', 'main_video_embed_url': main_video_embed_url}
     with open("output/index.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
-    print("--- トップページの生成完了 ---")
+    print("--- [DEBUG] トップページの生成完了 ---")
 
 def generate_glossary_page(env, base_path):
-    print("--- 指標解説ページの生成開始 ---")
+    print("\n--- [DEBUG] 指標解説ページの生成開始 ---")
     template = env.get_template('glossary_template.html')
     glossary_items = [{'term': 'Pace', 'description': '1試合あたり48分間のポゼッション（攻撃回数）の推定値。'}, {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'}, {'term': 'Defensive Efficiency (DEF EFF)', 'description': '100ポゼッションあたりの失点。'}, {'term': 'Net Rating (NET EFF)', 'description': 'Offensive EfficiencyとDefensive Efficiencyの差。'}, {'term': 'True Shooting % (TS%)', 'description': 'フィールドゴール、3ポイント、フリースローを総合的に評価したシュート効率。'}, {'term': 'Assist Ratio (AST)', 'description': 'チームのフィールドゴール成功のうち、アシストが占める割合。'}, {'term': 'Turnover Ratio (TO)', 'description': '100ポゼッションあたりのターンオーバー数。'}, {'term': 'Off Rebound Rate (ORR)', 'description': 'オフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}, {'term': 'Def Rebound Rate (DRR)', 'description': 'ディフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}]
     stat_pages, all_teams_structured = get_footer_data(base_path)
     render_data = {'base_path': base_path, 'glossary_items': glossary_items, 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured, 'glossary_url': f'{base_path}/glossary.html'}
     with open("output/glossary.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
-    print("--- 指標解説ページの生成完了 ---")
+    print("--- [DEBUG] 指標解説ページの生成完了 ---")
 
 def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_team_map, base_path):
-    print("--- チーム別比較ページの生成開始 ---")
+    print("\n--- [DEBUG] チーム別比較ページの生成開始 ---")
     df_s1_indexed = df_s1.set_index('Team'); df_s2_indexed = df_s2.set_index('Team')
     all_teams = sorted(list(df_s1_indexed.index.union(df_s2_indexed.index)))
     template = env.get_template('comparison_template.html')
@@ -125,10 +125,10 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_
             output_path = f"output/teams/comparison_{image_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e: print(f"警告: {team} の比較ページ生成中にエラーが発生しました。詳細: {e}")
-    print("--- チーム別比較ページの生成完了 ---")
+    print("--- [DEBUG] チーム別比較ページの生成完了 ---")
 
 def generate_stat_pages(df_s1, df_s2, env, base_path):
-    print("--- 指標別ランキングページの生成開始 ---")
+    print("\n--- [DEBUG] 指標別ランキングページの生成開始 ---")
     template = env.get_template('stat_comparison_template.html')
     for stat_short, stat_full in STATS_TO_GENERATE.items():
         try:
@@ -145,12 +145,12 @@ def generate_stat_pages(df_s1, df_s2, env, base_path):
             output_path = f"output/stats/{stat_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e: print(f"エラー: {stat_full} のページ生成中に問題が発生しました: {e}")
-    print("--- 指標別ランキングページの生成完了 ---")
+    print("--- [DEBUG] 指標別ランキングページの生成完了 ---")
 
 def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map, base_path):
-    print("--- 選手ページの生成開始 ---")
+    print("\n--- [DEBUG] 選手ページの生成開始 ---")
     if df_s1_raw is None or df_s2_raw is None:
-        print("警告: 選手データファイルが見つからないため、選手ページをスキップします。")
+        print("[DEBUG] 選手データ(df_s1_raw or df_s2_raw)がNoneのため、選手ページ生成をスキップします。")
         return
 
     def generate_player_comment(player_name, season_str_long, player_season_timeline):
@@ -172,6 +172,7 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         comment_parts.append(f"強みは{primary_style}です。"); return " ".join(comment_parts)
 
     df_merged = pd.merge(df_s2_raw, df_s1_raw, on='Player', how='left', suffixes=('_s2', '_s1'))
+    print(f"[DEBUG] 選手データのマージ完了。処理対象の選手数: {len(df_merged)}")
     template = env.get_template('player_comparison_template.html')
     stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
@@ -179,6 +180,7 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
     for index, player_data in df_merged.iterrows():
         player_name = player_data.get('Player', 'Unknown')
         try:
+            print(f"\n[DEBUG] ----- 選手処理開始: {player_name} -----")
             player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
             
             has_s1_data = pd.notna(player_data.get('PTS_s1'))
@@ -201,8 +203,10 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 'has_timeline_23_24': False,
                 'has_timeline_24_25': False
             }
+            print(f"[DEBUG] has_s1_data (前シーズンデータ有無): {has_s1_data}")
 
             if has_s1_data:
+                print("[DEBUG] 前シーズンデータあり。比較グラフを生成します。")
                 graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s2 = graph_stats_s2_series.fillna(0).values
@@ -213,15 +217,21 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
                 ax.set_ylabel('Value'); ax.set_title(f'Key Stats Comparison: {player_name}')
                 ax.set_xticks(x); ax.set_xticklabels(stats_to_compare); ax.legend(); fig.tight_layout()
-                plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
+                graph_path = f"output/images/players/comparison_{player_filename}.svg"
+                plt.savefig(graph_path, format="svg")
                 plt.close(fig)
+                print(f"[DEBUG] 比較グラフを保存しました: {graph_path}")
 
             for season_str_short in ["23-24", "24-25"]:
                 season_str_long = f"20{season_str_short}"
                 player_timeline = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == season_str_long)]
-                if player_timeline.empty: continue
                 
-                # ★★★ ここから修正・追加 ★★★
+                if player_timeline.empty:
+                    print(f"[DEBUG] {season_str_long}シーズンのタイムラインデータはありません。")
+                    continue
+                
+                print(f"[DEBUG] {season_str_long}シーズンのタイムラインデータを検出。グラフを生成します。")
+                
                 if season_str_short == "23-24":
                     render_data['has_timeline_23_24'] = True
                     render_data['comment_23_24'] = generate_player_comment(player_name, season_str_long, player_timeline)
@@ -229,7 +239,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                     render_data['has_timeline_24_25'] = True
                     render_data['comment_24_25'] = generate_player_comment(player_name, season_str_long, player_timeline)
                 
-                # タイムライングラフ1: 累積得点
                 made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1].copy()
                 if not made_shots.empty:
                     point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
@@ -243,10 +252,11 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                     ax.set_xlabel('Game Minute'); ax.set_ylabel('Cumulative Points')
                     ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
                     ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
-                    plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg")
+                    graph_path = f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg"
+                    plt.savefig(graph_path, format="svg")
                     plt.close(fig)
+                    print(f"[DEBUG] 得点タイムライングラフを保存しました: {graph_path}")
 
-                # タイムライングラフ2: シュート試投
                 shots_made = player_timeline[player_timeline['MADE_FLAG'] == 1]
                 shots_missed = player_timeline[player_timeline['MADE_FLAG'] == 0]
                 shot_type_y_map = {'3PT': 3, '2PT': 2, 'FT': 1}
@@ -262,27 +272,31 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 ax.set_yticks(list(shot_type_y_map.values())); ax.set_yticklabels(list(shot_type_y_map.keys()))
                 ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
                 ax.legend(); ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
-                plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg")
+                graph_path = f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg"
+                plt.savefig(graph_path, format="svg")
                 plt.close(fig)
-                # ★★★ 修正・追加ここまで ★★★
+                print(f"[DEBUG] シュート試投グラフを保存しました: {graph_path}")
 
             output_path = f"output/players/{player_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(template.render(render_data))
+            print(f"[DEBUG] HTMLページを生成しました: {output_path}")
+            print(f"[DEBUG] ----- 選手処理完了: {player_name} -----")
+
         except Exception as e:
-            print(f"警告: {player_name} のページ生成中にエラー: {e}")
+            print(f"!!!!! [エラー] !!!!! {player_name} のページ生成中に致命的なエラーが発生しました: {e}")
             traceback.print_exc()
-    print("--- 選手ページの生成完了 ---")
+            
+    print("--- [DEBUG] 選手ページの生成完了 ---")
+
 
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
-    print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
+    print(f"\n--- [DEBUG] {season_str}シーズン 選手ランキングページの生成開始 ---")
     if df_current is None:
-        print(f"警告: {season_str}の選手データがないため、ランキングページをスキップします。")
+        print(f"[DEBUG] {season_str}の選手データ(df_current)がNoneのため、ランキングページをスキップします。")
         return
-    # 前シーズンデータがない場合も処理を継続するため、Noneチェックを修正
     if df_previous is None:
-        print(f"警告: 前シーズンの選手データが見つかりません。比較なしで {season_str} のランキングを生成します。")
-        # 空のDataFrameを作成してエラーを回避
+        print(f"[DEBUG] 前シーズンの選手データが見つかりません。比較なしで {season_str} のランキングを生成します。")
         df_previous = pd.DataFrame(columns=df_current.columns)
 
     template = env.get_template('season_player_index_template.html')
@@ -296,7 +310,10 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
         for col in [stat_key_current, stat_key_previous]: df_merged[col] = pd.to_numeric(df_merged[col], errors='coerce')
         df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
         top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
-        plt.style.use('seaborn-v0_8-talk'); fig, ax = plt.subplots(figsize=(10, 8)); y = np.arange(len(top_10_players)); height = 0.4
+        
+        # ★★★ グラフのスタイル指定を削除 ★★★
+        fig, ax = plt.subplots(figsize=(10, 8)); y = np.arange(len(top_10_players)); height = 0.4
+        
         players_reversed = top_10_players.iloc[::-1]
         ax.barh(y - height/2, players_reversed[stat_key_previous], height, label=previous_season_str); ax.barh(y + height/2, players_reversed[stat_key_current], height, label=season_str)
         ax.set_xlabel(name_en); ax.set_ylabel('Player'); ax.set_title(f'Top 10 {name_en} Leaders ({season_str} Season)'); ax.set_yticks(y); ax.set_yticklabels(players_reversed['Player']); ax.legend(); fig.tight_layout()
@@ -312,49 +329,65 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
     render_data = {'base_path': base_path, 'season_str': season_str, 'leaders_with_graphs': leaders_with_graphs, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html'}
     output_path = f"output/{season_str}/index.html"
     with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
-    print(f"--- {season_str}シーズン 選手ランキングページの生成完了 ---")
+    print(f"--- [DEBUG] {season_str}シーズン 選手ランキングページの生成完了 ---")
 
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     base_path = "/nba-stats-media"
     
     os.makedirs("output/teams", exist_ok=True); os.makedirs("output/images", exist_ok=True); os.makedirs("output/stats", exist_ok=True); os.makedirs("output/logos", exist_ok=True); os.makedirs("output/css", exist_ok=True); os.makedirs("output/players", exist_ok=True); os.makedirs("output/images/players", exist_ok=True); os.makedirs("output/2023-24", exist_ok=True); os.makedirs("output/2024-25", exist_ok=True); os.makedirs("output/images/season_leaders", exist_ok=True)
-    print("出力ディレクトリの準備が完了しました。")
+    print("[DEBUG] 出力ディレクトリの準備完了。")
 
     df_23_24, df_24_25 = None, None
     try:
-        df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv"); df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
+        print("\n[DEBUG] --- チームデータ読み込み開始 ---")
+        df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv")
+        print("[DEBUG] espn_team_stats_2023-24.csv 読み込み完了。")
+        df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
+        print("[DEBUG] espn_team_stats_2024-25.csv 読み込み完了。")
         df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP); df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']; df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
         df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False); df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False); df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True)
+        print("[DEBUG] チームデータ前処理完了。")
     except FileNotFoundError as e:
-        print(f"エラー: チーム統計ファイルが見つかりません: {e}")
+        print(f"!!!!! [エラー] !!!!! チーム統計ファイルが見つかりません: {e}")
         sys.exit(1)
     
     df_players_23_24, df_players_24_25, player_team_map = None, None, {}
     try:
-        df_players_23_24 = pd.read_csv("player_stats_2023-24.csv"); df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
+        print("\n[DEBUG] --- 選手データ読み込み開始 ---")
+        df_players_23_24 = pd.read_csv("player_stats_2023-24.csv")
+        df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
+        print(f"[DEBUG] player_stats_2023-24.csv 読み込み完了。 {len(df_players_23_24)} 行")
+        print(df_players_23_24.head())
     except FileNotFoundError:
-        print("警告: 2023-24シーズンの選手データファイルが見つかりません。")
+        print("[DEBUG] 警告: player_stats_2023-24.csv が見つかりません。")
     try:
-        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv"); df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
+        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
+        df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
+        print(f"[DEBUG] player_stats_2024-25.csv 読み込み完了。 {len(df_players_24_25)} 行")
+        print(df_players_24_25.head())
     except FileNotFoundError:
-        print("警告: 2024-25シーズンの選手データファイルが見つかりません。")
+        print("[DEBUG] 警告: player_stats_2024-25.csv が見つかりません。")
     try:
-        roster_df = pd.read_csv("player_team_map.csv"); roster_df['Player'] = roster_df['Player'].apply(normalize_name)
+        roster_df = pd.read_csv("player_team_map.csv")
+        roster_df['Player'] = roster_df['Player'].apply(normalize_name)
         player_team_map = pd.Series(roster_df.Team.values, index=roster_df.Player).to_dict()
+        print(f"[DEBUG] player_team_map.csv 読み込み完了。 {len(player_team_map)} 人")
     except FileNotFoundError:
-        print("警告: 選手チーム対応ファイル(player_team_map.csv)が見つかりません。")
+        print("[DEBUG] 警告: player_team_map.csv が見つかりません。")
 
     try:
         with open('youtube_videos.json', 'r') as f: video_data = json.load(f)
+        print("[DEBUG] youtube_videos.json 読み込み完了。")
     except FileNotFoundError: video_data = {}
 
     try:
         scoring_timeline_data = pd.read_csv('player_scoring_timeline.csv')
         scoring_timeline_data['Player'] = scoring_timeline_data['Player'].apply(normalize_name)
+        print(f"[DEBUG] player_scoring_timeline.csv 読み込み完了。 {len(scoring_timeline_data)} 行")
     except FileNotFoundError:
-        print("警告: スコアリングタイムラインデータが見つかりません。")
+        print("[DEBUG] 警告: player_scoring_timeline.csv が見つかりません。")
         scoring_timeline_data = pd.DataFrame()
 
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -368,4 +401,4 @@ if __name__ == "__main__":
     generate_season_player_index(env, base_path, '2024-25', df_players_24_25, df_players_23_24)
     generate_season_player_index(env, base_path, '2023-24', df_players_23_24, df_players_24_25)
 
-    print("\n--- すべての処理が完了しました ---")
+    print("\n--- [DEBUG] すべての処理が完了しました ---")
