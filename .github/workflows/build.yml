@@ -44,6 +44,12 @@ jobs:
           cp -r css output/
           cp -r js output/
 
+      - name: Verify generated files
+        run: |
+          echo "--- Verifying contents of output directory ---"
+          ls -R output
+          echo "--- Verification complete ---"
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
