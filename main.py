@@ -1,4 +1,4 @@
-# main.py (デバッグログ強化版)
+# main.py (キャッシュ対応・高速化版)
 
 import os
 import sys
@@ -13,17 +13,31 @@ import json
 import unicodedata
 import traceback
 
+# ★★★ 追加 ★★★
+# ファイルが最新かどうかをチェックするヘルパー関数
+def is_file_up_to_date(output_path, dependencies):
+    if not os.path.exists(output_path):
+        return False
+    output_mtime = os.path.getmtime(output_path)
+    for dep in dependencies:
+        if os.path.exists(dep) and os.path.getmtime(dep) > output_mtime:
+            return False
+    return True
+
 def normalize_name(name):
     if not isinstance(name, str): return ""
     name = "".join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
     name = re.sub(r'\s+(Jr|Sr|II|III|IV|V)\.?$', '', name, flags=re.IGNORECASE)
     return name.strip()
 
+# (CONFERENCE_STRUCTURE, TEAM_DETAILSなどの定数は変更なし)
 CONFERENCE_STRUCTURE = { "Western Conference": { "Northwest Division": ["Denver Nuggets", "Minnesota Timberwolves", "Oklahoma City Thunder", "Portland Trail Blazers", "Utah Jazz"], "Pacific Division": ["Golden State Warriors", "LA Clippers", "Los Angeles Lakers", "Phoenix Suns", "Sacramento Kings"], "Southwest Division": ["Dallas Mavericks", "Houston Rockets", "Memphis Grizzlies", "New Orleans Pelicans", "San Antonio Spurs"] }, "Eastern Conference": { "Atlantic Division": ["Boston Celtics", "Brooklyn Nets", "New York Knicks", "Philadelphia 76ers", "Toronto Raptors"], "Central Division": ["Chicago Bulls", "Cleveland Cavaliers", "Detroit Pistons", "Indiana Pacers", "Milwaukee Bucks"], "Southeast Division": ["Atlanta Hawks", "Charlotte Hornets", "Miami Heat", "Orlando Magic", "Washington Wizards"] } }
 TEAM_DETAILS = { "Atlanta Hawks": {"conference": "Eastern", "division": "Southeast"}, "Boston Celtics": {"conference": "Eastern", "division": "Atlantic"}, "Brooklyn Nets": {"conference": "Eastern", "division": "Atlantic"}, "Charlotte Hornets": {"conference": "Eastern", "division": "Southeast"}, "Chicago Bulls": {"conference": "Eastern", "division": "Central"}, "Cleveland Cavaliers": {"conference": "Eastern", "division": "Central"}, "Dallas Mavericks": {"conference": "Western", "division": "Southwest"}, "Denver Nuggets": {"conference": "Western", "division": "Northwest"}, "Detroit Pistons": {"conference": "Eastern", "division": "Central"}, "Golden State Warriors": {"conference": "Western", "division": "Pacific"}, "Houston Rockets": {"conference": "Western", "division": "Southwest"}, "Indiana Pacers": {"conference": "Eastern", "division": "Central"}, "LA Clippers": {"conference": "Western", "division": "Pacific"}, "Los Angeles Lakers": {"conference": "Western", "division": "Pacific"}, "Memphis Grizzlies": {"conference": "Western", "division": "Southwest"}, "Miami Heat": {"conference": "Eastern", "division": "Southeast"}, "Milwaukee Bucks": {"conference": "Eastern", "division": "Central"}, "Minnesota Timberwolves": {"conference": "Western", "division": "Northwest"}, "New Orleans Pelicans": {"conference": "Western", "division": "Southwest"}, "New York Knicks": {"conference": "Eastern", "division": "Atlantic"}, "Oklahoma City Thunder": {"conference": "Western", "division": "Northwest"}, "Orlando Magic": {"conference": "Eastern", "division": "Southeast"}, "Philadelphia 76ers": {"conference": "Eastern", "division": "Atlantic"}, "Phoenix Suns": {"conference": "Western", "division": "Pacific"}, "Portland Trail Blazers": {"conference": "Western", "division": "Northwest"}, "Sacramento Kings": {"conference": "Western", "division": "Pacific"}, "San Antonio Spurs": {"conference": "Western", "division": "Southwest"}, "Toronto Raptors": {"conference": "Eastern", "division": "Atlantic"}, "Utah Jazz": {"conference": "Western", "division": "Northwest"}, "Washington Wizards": {"conference": "Eastern", "division": "Southeast"} }
 STATS_TO_GENERATE = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
 TEAM_NAME_MAP = { "Atlanta": "Atlanta Hawks", "Boston": "Boston Celtics", "Brooklyn": "Brooklyn Nets", "Charlotte": "Charlotte Hornets", "Chicago": "Chicago Bulls", "Cleveland": "Cleveland Cavaliers", "Dallas": "Dallas Mavericks", "Denver": "Denver Nuggets", "Detroit": "Detroit Pistons", "Golden State": "Golden State Warriors", "Houston": "Houston Rockets", "Indiana": "Indiana Pacers", "LA Clippers": "LA Clippers", "LA Lakers": "Los Angeles Lakers", "Memphis": "Memphis Grizzlies", "Miami": "Miami Heat", "Milwaukee": "Milwaukee Bucks", "Minnesota": "Minnesota Timberwolves", "New Orleans": "New Orleans Pelicans", "New York": "New York Knicks", "Oklahoma City": "Oklahoma City Thunder", "Orlando": "Orlando Magic", "Philadelphia": "Philadelphia 76ers", "Phoenix": "Phoenix Suns", "Portland": "Portland Trail Blazers", "Sacramento": "Sacramento Kings", "San Antonio": "San Antonio Spurs", "Toronto": "Toronto Raptors", "Utah": "Utah Jazz", "Washington": "Washington Wizards" }
 
+
+# (generate_team_summary, get_footer_data, generate_main_index, generate_glossary_page は変更なし)
 def generate_team_summary(s1_stats, s2_stats):
     if s2_stats.empty: return ""
     STAT_INFO = { 'OFF EFF': {'jp': 'オフェンス'}, 'DEF EFF': {'jp': 'ディフェンス'}, 'PACE': {'jp': '試合のペース'} }
@@ -40,7 +54,6 @@ def generate_team_summary(s1_stats, s2_stats):
         challenge_sentence = f"一方で、今後の更なる飛躍のためには、{challenge_desc}{STAT_INFO[biggest_challenge_stat]['jp']}の立て直しが鍵となるでしょう。"
     else: challenge_sentence = "この安定感をシーズン通して維持し、さらに一段階レベルアップできれば、素晴らしい結果が期待できます。"
     return positive_sentence + " " + challenge_sentence
-
 def get_footer_data(base_path):
     stat_pages = [{'name': en_full, 'url': f"{base_path}/stats/{en_short.replace('%', '_PCT').replace(' ', '_')}.html"} for en_short, en_full in STATS_TO_GENERATE.items()]
     all_teams_structured = {}
@@ -49,9 +62,8 @@ def get_footer_data(base_path):
         for div, teams_in_div in divisions.items():
             all_teams_structured[conf][div] = [{'name': team, 'url': f"{base_path}/teams/comparison_{team.replace(' ', '_')}.html"} for team in teams_in_div]
     return stat_pages, all_teams_structured
-
 def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1, df_players_s2, video_data):
-    print("\n--- [DEBUG] トップページの生成開始 ---")
+    print("--- トップページの生成開始 ---")
     template = env.get_template('index_template.html')
     top_teams_by_stat = {}
     team_stats_to_show = {'OFF EFF': 'オフェンス効率', 'DEF EFF': 'ディフェンス効率', 'PACE': 'ペース'}
@@ -84,51 +96,80 @@ def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1,
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
     render_data = {'base_path': base_path, 'top_teams_by_stat': top_teams_by_stat, 'top_players_by_stat': top_players_by_stat, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html', 'main_video_embed_url': main_video_embed_url}
     with open("output/index.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
-    print("--- [DEBUG] トップページの生成完了 ---")
-
+    print("--- トップページの生成完了 ---")
 def generate_glossary_page(env, base_path):
-    print("\n--- [DEBUG] 指標解説ページの生成開始 ---")
+    print("--- 指標解説ページの生成開始 ---")
     template = env.get_template('glossary_template.html')
     glossary_items = [{'term': 'Pace', 'description': '1試合あたり48分間のポゼッション（攻撃回数）の推定値。'}, {'term': 'Offensive Efficiency (OFF EFF)', 'description': '100ポゼッションあたりの得点。'}, {'term': 'Defensive Efficiency (DEF EFF)', 'description': '100ポゼッションあたりの失点。'}, {'term': 'Net Rating (NET EFF)', 'description': 'Offensive EfficiencyとDefensive Efficiencyの差。'}, {'term': 'True Shooting % (TS%)', 'description': 'フィールドゴール、3ポイント、フリースローを総合的に評価したシュート効率。'}, {'term': 'Assist Ratio (AST)', 'description': 'チームのフィールドゴール成功のうち、アシストが占める割合。'}, {'term': 'Turnover Ratio (TO)', 'description': '100ポゼッションあたりのターンオーバー数。'}, {'term': 'Off Rebound Rate (ORR)', 'description': 'オフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}, {'term': 'Def Rebound Rate (DRR)', 'description': 'ディフェンスリバウンド機会のうち、実際にリバウンドを獲得した割合。'}]
     stat_pages, all_teams_structured = get_footer_data(base_path)
     render_data = {'base_path': base_path, 'glossary_items': glossary_items, 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured, 'glossary_url': f'{base_path}/glossary.html'}
     with open("output/glossary.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
-    print("--- [DEBUG] 指標解説ページの生成完了 ---")
+    print("--- 指標解説ページの生成完了 ---")
+
 
 def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_team_map, base_path):
-    print("\n--- [DEBUG] チーム別比較ページの生成開始 ---")
-    df_s1_indexed = df_s1.set_index('Team'); df_s2_indexed = df_s2.set_index('Team')
+    print("--- チーム別比較ページの生成開始 ---")
+    df_s1_indexed = df_s1.set_index('Team')
+    df_s2_indexed = df_s2.set_index('Team')
     all_teams = sorted(list(df_s1_indexed.index.union(df_s2_indexed.index)))
     template = env.get_template('comparison_template.html')
     stats_to_compare = ['PACE', 'OFF EFF', 'DEF EFF', 'NET EFF', 'TS%', 'AST', 'TO']
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
+
+    active_players_s2 = set()
+    if df_players is not None:
+        active_players_s2 = set(df_players['Player'])
+
     for team in all_teams:
         try:
-            stats1 = df_s1_indexed.loc[team]; stats2 = df_s2_indexed.loc[team]
-            stats_for_graph1 = stats1[stats_to_compare]; stats_for_graph2 = stats2[stats_to_compare]
+            # ★★★ 修正箇所 ★★★
+            # 依存するファイルリストを作成
+            image_filename = team.replace(' ', '_')
+            output_path = f"output/teams/comparison_{image_filename}.html"
+            dependencies = [
+                "espn_team_stats_2023-24.csv",
+                "espn_team_stats_2024-25.csv",
+                "player_team_map.csv",
+                "player_stats_2024-25.csv",
+                "templates/comparison_template.html"
+            ]
+            # ファイルが最新なら処理をスキップ
+            if is_file_up_to_date(output_path, dependencies):
+                print(f"スキップ: {output_path} は最新です。")
+                continue
+
+            stats1 = df_s1_indexed.loc[team]
+            stats2 = df_s2_indexed.loc[team]
+            stats_for_graph1 = stats1[stats_to_compare]
+            stats_for_graph2 = stats2[stats_to_compare]
             x = np.arange(len(stats_to_compare)); width = 0.35
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(x - width/2, stats_for_graph1, width, label='2023-24'); ax.bar(x + width/2, stats_for_graph2, width, label='2024-25')
+            ax.bar(x - width/2, stats_for_graph1, width, label='2023-24')
+            ax.bar(x + width/2, stats_for_graph2, width, label='2024-25')
             ax.set_ylabel('Value'); ax.set_title(f'Key Stats Comparison: {team}'); ax.set_xticks(x); ax.set_xticklabels(stats_to_compare, rotation=45, ha="right"); ax.legend(); fig.tight_layout()
-            image_filename = team.replace(' ', '_')
+            
             plt.savefig(f"output/images/comparison_{image_filename}.svg", format="svg"); plt.close(fig)
             summary = generate_team_summary(stats1, stats2)
+            
             player_list = []
-            if df_players is not None and player_team_map:
+            if player_team_map:
                 for player_name, player_team in player_team_map.items():
-                    if player_team == team:
+                    if player_team == team and player_name in active_players_s2:
                         player_filename_p = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
                         player_list.append({'name': player_name, 'url': f"{base_path}/players/{player_filename_p}.html"})
+
             video_id = video_data.get(team)
             video_embed_url = f"https://www.youtube.com/embed/{video_id}" if video_id else None
             render_data = { 'base_path': base_path, 'team_name': team, 'image_filename': image_filename, 'stats_s1': stats1.to_frame(name='Value').to_html(), 'stats_s2': stats2.to_frame(name='Value').to_html(), 'details': TEAM_DETAILS.get(team, {}), 'all_teams_structured': all_teams_structured_footer, 'stat_pages': stat_pages_footer, 'summary_text': summary, 'player_list': player_list, 'video_embed_url': video_embed_url, 'glossary_url': f'{base_path}/glossary.html' }
-            output_path = f"output/teams/comparison_{image_filename}.html"
+            
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
+            print(f"生成完了: {output_path}")
         except Exception as e: print(f"警告: {team} の比較ページ生成中にエラーが発生しました。詳細: {e}")
-    print("--- [DEBUG] チーム別比較ページの生成完了 ---")
+    print("--- チーム別比較ページの生成完了 ---")
 
+# (generate_stat_pages は変更なし)
 def generate_stat_pages(df_s1, df_s2, env, base_path):
-    print("\n--- [DEBUG] 指標別ランキングページの生成開始 ---")
+    print("--- 指標別ランキングページの生成開始 ---")
     template = env.get_template('stat_comparison_template.html')
     for stat_short, stat_full in STATS_TO_GENERATE.items():
         try:
@@ -145,15 +186,17 @@ def generate_stat_pages(df_s1, df_s2, env, base_path):
             output_path = f"output/stats/{stat_filename}.html"
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e: print(f"エラー: {stat_full} のページ生成中に問題が発生しました: {e}")
-    print("--- [DEBUG] 指標別ランキングページの生成完了 ---")
+    print("--- 指標別ランキングページの生成完了 ---")
+
 
 def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map, base_path):
-    print("\n--- [DEBUG] 選手ページの生成開始 ---")
+    print("--- 選手ページの生成開始 ---")
     if df_s1_raw is None or df_s2_raw is None:
-        print("[DEBUG] 選手データ(df_s1_raw or df_s2_raw)がNoneのため、選手ページ生成をスキップします。")
+        print("警告: 選手データファイルが見つからないため、選手ページをスキップします。")
         return
 
     def generate_player_comment(player_name, season_str_long, player_season_timeline):
+        # ... (この関数の内部は変更なし)
         if player_season_timeline.empty: return f"{player_name}選手の{season_str_long}シーズンの詳細な得点データはありません。"
         point_map = {'3PT': 3, '2PT': 2, 'FT': 1}; made_shots = player_season_timeline[player_season_timeline['MADE_FLAG'] == 1].copy()
         if made_shots.empty: return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
@@ -172,7 +215,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         comment_parts.append(f"強みは{primary_style}です。"); return " ".join(comment_parts)
 
     df_merged = pd.merge(df_s2_raw, df_s1_raw, on='Player', how='left', suffixes=('_s2', '_s1'))
-    print(f"[DEBUG] 選手データのマージ完了。処理対象の選手数: {len(df_merged)}")
     template = env.get_template('player_comparison_template.html')
     stats_to_compare = ['PTS', 'REB', 'AST', 'STL', 'BLK']
     stat_pages_footer, all_teams_structured_footer = get_footer_data(base_path)
@@ -180,33 +222,27 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
     for index, player_data in df_merged.iterrows():
         player_name = player_data.get('Player', 'Unknown')
         try:
-            print(f"\n[DEBUG] ----- 選手処理開始: {player_name} -----")
+            # ★★★ 修正箇所 ★★★
             player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
-            
-            has_s1_data = pd.notna(player_data.get('PTS_s1'))
+            output_path = f"output/players/{player_filename}.html"
+            dependencies = [
+                "player_stats_2023-24.csv",
+                "player_stats_2024-25.csv",
+                "player_scoring_timeline.csv",
+                "templates/player_comparison_template.html"
+            ]
+            if is_file_up_to_date(output_path, dependencies):
+                print(f"スキップ: {output_path} は最新です。")
+                continue
 
+            has_s1_data = pd.notna(player_data.get('PTS_s1'))
+            # ... (以降のHTML生成ロジックは変更なし)
             stats_s2_table = pd.DataFrame(player_data.filter(like='_s2')).rename(index=lambda x: x.replace('_s2', ''))
             stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
-            
             team_name = player_team_map.get(player_name, ''); team_url = ""
             if team_name: team_url = f"{base_path}/teams/comparison_{team_name.replace(' ', '_')}.html"
-            
-            render_data = { 
-                'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 
-                'player_info': stats_s2_table.T.to_dict('records')[0], 
-                'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 
-                'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 
-                'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 
-                'team_name': team_name, 'team_url': team_url, 
-                'glossary_url': f'{base_path}/glossary.html',
-                'has_s1_data': has_s1_data,
-                'has_timeline_23_24': False,
-                'has_timeline_24_25': False
-            }
-            print(f"[DEBUG] has_s1_data (前シーズンデータ有無): {has_s1_data}")
-
+            render_data = { 'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 'player_info': stats_s2_table.T.to_dict('records')[0], 'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'team_name': team_name, 'team_url': team_url, 'glossary_url': f'{base_path}/glossary.html','has_s1_data': has_s1_data, 'has_timeline_23_24': False, 'has_timeline_24_25': False }
             if has_s1_data:
-                print("[DEBUG] 前シーズンデータあり。比較グラフを生成します。")
                 graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s2 = graph_stats_s2_series.fillna(0).values
@@ -217,86 +253,65 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 ax.bar(x + width/2, graph_stats_s2, width, label='2024-25')
                 ax.set_ylabel('Value'); ax.set_title(f'Key Stats Comparison: {player_name}')
                 ax.set_xticks(x); ax.set_xticklabels(stats_to_compare); ax.legend(); fig.tight_layout()
-                graph_path = f"output/images/players/comparison_{player_filename}.svg"
-                plt.savefig(graph_path, format="svg")
+                plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
                 plt.close(fig)
-                print(f"[DEBUG] 比較グラフを保存しました: {graph_path}")
-
             for season_str_short in ["23-24", "24-25"]:
                 season_str_long = f"20{season_str_short}"
                 player_timeline = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == season_str_long)]
-                
-                if player_timeline.empty:
-                    print(f"[DEBUG] {season_str_long}シーズンのタイムラインデータはありません。")
-                    continue
-                
-                print(f"[DEBUG] {season_str_long}シーズンのタイムラインデータを検出。グラフを生成します。")
-                
+                if player_timeline.empty: continue
                 if season_str_short == "23-24":
                     render_data['has_timeline_23_24'] = True
                     render_data['comment_23_24'] = generate_player_comment(player_name, season_str_long, player_timeline)
                 elif season_str_short == "24-25":
                     render_data['has_timeline_24_25'] = True
                     render_data['comment_24_25'] = generate_player_comment(player_name, season_str_long, player_timeline)
-                
                 made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1].copy()
                 if not made_shots.empty:
                     point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
                     made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
                     made_shots_sorted = made_shots.sort_values('absolute_minute')
                     made_shots_sorted['CUM_POINTS'] = made_shots_sorted['POINTS'].cumsum()
-                    
                     fig, ax = plt.subplots(figsize=(10, 6))
                     ax.plot(made_shots_sorted['absolute_minute'], made_shots_sorted['CUM_POINTS'], marker='o', linestyle='-')
                     ax.set_title(f'{player_name} Scoring Timeline ({season_str_long})')
                     ax.set_xlabel('Game Minute'); ax.set_ylabel('Cumulative Points')
                     ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
                     ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
-                    graph_path = f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg"
-                    plt.savefig(graph_path, format="svg")
+                    plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg")
                     plt.close(fig)
-                    print(f"[DEBUG] 得点タイムライングラフを保存しました: {graph_path}")
-
                 shots_made = player_timeline[player_timeline['MADE_FLAG'] == 1]
                 shots_missed = player_timeline[player_timeline['MADE_FLAG'] == 0]
                 shot_type_y_map = {'3PT': 3, '2PT': 2, 'FT': 1}
-
                 fig, ax = plt.subplots(figsize=(10, 6))
                 if not shots_made.empty:
                     ax.scatter(shots_made['absolute_minute'], shots_made['SHOT_TYPE'].map(shot_type_y_map), c='blue', label='Made', alpha=0.7)
                 if not shots_missed.empty:
                     ax.scatter(shots_missed['absolute_minute'], shots_missed['SHOT_TYPE'].map(shot_type_y_map), c='red', marker='x', label='Missed', alpha=0.7)
-
                 ax.set_title(f'{player_name} Shot Attempts ({season_str_long})')
                 ax.set_xlabel('Game Minute'); ax.set_ylabel('Shot Type')
                 ax.set_yticks(list(shot_type_y_map.values())); ax.set_yticklabels(list(shot_type_y_map.keys()))
                 ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
                 ax.legend(); ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
-                graph_path = f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg"
-                plt.savefig(graph_path, format="svg")
+                plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg")
                 plt.close(fig)
-                print(f"[DEBUG] シュート試投グラフを保存しました: {graph_path}")
-
-            output_path = f"output/players/{player_filename}.html"
+            
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(template.render(render_data))
-            print(f"[DEBUG] HTMLページを生成しました: {output_path}")
-            print(f"[DEBUG] ----- 選手処理完了: {player_name} -----")
+            print(f"生成完了: {output_path}")
 
         except Exception as e:
-            print(f"!!!!! [エラー] !!!!! {player_name} のページ生成中に致命的なエラーが発生しました: {e}")
+            print(f"警告: {player_name} のページ生成中にエラー: {e}")
             traceback.print_exc()
-            
-    print("--- [DEBUG] 選手ページの生成完了 ---")
+    print("--- 選手ページの生成完了 ---")
 
-
+# (generate_season_player_index と if __name__ == "__main__": は変更なし)
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
-    print(f"\n--- [DEBUG] {season_str}シーズン 選手ランキングページの生成開始 ---")
+    print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
     if df_current is None:
-        print(f"[DEBUG] {season_str}の選手データ(df_current)がNoneのため、ランキングページをスキップします。")
+        print(f"警告: {season_str}の選手データがないため、ランキングページをスキップします。")
         return
     if df_previous is None:
-        print(f"[DEBUG] 前シーズンの選手データが見つかりません。比較なしで {season_str} のランキングを生成します。")
+        print(f"警告: 前シーズンの選手データが見つかりません。比較なしで {season_str} のランキングを生成します。")
         df_previous = pd.DataFrame(columns=df_current.columns)
 
     template = env.get_template('season_player_index_template.html')
@@ -311,7 +326,6 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
         df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
         top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
         
-        # ★★★ グラフのスタイル指定を削除 ★★★
         fig, ax = plt.subplots(figsize=(10, 8)); y = np.arange(len(top_10_players)); height = 0.4
         
         players_reversed = top_10_players.iloc[::-1]
@@ -329,65 +343,48 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
     render_data = {'base_path': base_path, 'season_str': season_str, 'leaders_with_graphs': leaders_with_graphs, 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'glossary_url': f'{base_path}/glossary.html'}
     output_path = f"output/{season_str}/index.html"
     with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
-    print(f"--- [DEBUG] {season_str}シーズン 選手ランキングページの生成完了 ---")
-
+    print(f"--- {season_str}シーズン 選手ランキングページの生成完了 ---")
 if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     base_path = "/nba-stats-media"
     
     os.makedirs("output/teams", exist_ok=True); os.makedirs("output/images", exist_ok=True); os.makedirs("output/stats", exist_ok=True); os.makedirs("output/logos", exist_ok=True); os.makedirs("output/css", exist_ok=True); os.makedirs("output/players", exist_ok=True); os.makedirs("output/images/players", exist_ok=True); os.makedirs("output/2023-24", exist_ok=True); os.makedirs("output/2024-25", exist_ok=True); os.makedirs("output/images/season_leaders", exist_ok=True)
-    print("[DEBUG] 出力ディレクトリの準備完了。")
+    print("出力ディレクトリの準備が完了しました。")
 
     df_23_24, df_24_25 = None, None
     try:
-        print("\n[DEBUG] --- チームデータ読み込み開始 ---")
-        df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv")
-        print("[DEBUG] espn_team_stats_2023-24.csv 読み込み完了。")
-        df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
-        print("[DEBUG] espn_team_stats_2024-25.csv 読み込み完了。")
+        df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv"); df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
         df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP); df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
         df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']; df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
         df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False); df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False); df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True)
-        print("[DEBUG] チームデータ前処理完了。")
     except FileNotFoundError as e:
-        print(f"!!!!! [エラー] !!!!! チーム統計ファイルが見つかりません: {e}")
+        print(f"エラー: チーム統計ファイルが見つかりません: {e}")
         sys.exit(1)
     
     df_players_23_24, df_players_24_25, player_team_map = None, None, {}
     try:
-        print("\n[DEBUG] --- 選手データ読み込み開始 ---")
-        df_players_23_24 = pd.read_csv("player_stats_2023-24.csv")
-        df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
-        print(f"[DEBUG] player_stats_2023-24.csv 読み込み完了。 {len(df_players_23_24)} 行")
-        print(df_players_23_24.head())
+        df_players_23_24 = pd.read_csv("player_stats_2023-24.csv"); df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
     except FileNotFoundError:
-        print("[DEBUG] 警告: player_stats_2023-24.csv が見つかりません。")
+        print("警告: 2023-24シーズンの選手データファイルが見つかりません。")
     try:
-        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
-        df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
-        print(f"[DEBUG] player_stats_2024-25.csv 読み込み完了。 {len(df_players_24_25)} 行")
-        print(df_players_24_25.head())
+        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv"); df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
     except FileNotFoundError:
-        print("[DEBUG] 警告: player_stats_2024-25.csv が見つかりません。")
+        print("警告: 2024-25シーズンの選手データファイルが見つかりません。")
     try:
-        roster_df = pd.read_csv("player_team_map.csv")
-        roster_df['Player'] = roster_df['Player'].apply(normalize_name)
+        roster_df = pd.read_csv("player_team_map.csv"); roster_df['Player'] = roster_df['Player'].apply(normalize_name)
         player_team_map = pd.Series(roster_df.Team.values, index=roster_df.Player).to_dict()
-        print(f"[DEBUG] player_team_map.csv 読み込み完了。 {len(player_team_map)} 人")
     except FileNotFoundError:
-        print("[DEBUG] 警告: player_team_map.csv が見つかりません。")
+        print("警告: 選手チーム対応ファイル(player_team_map.csv)が見つかりません。")
 
     try:
         with open('youtube_videos.json', 'r') as f: video_data = json.load(f)
-        print("[DEBUG] youtube_videos.json 読み込み完了。")
     except FileNotFoundError: video_data = {}
 
     try:
         scoring_timeline_data = pd.read_csv('player_scoring_timeline.csv')
         scoring_timeline_data['Player'] = scoring_timeline_data['Player'].apply(normalize_name)
-        print(f"[DEBUG] player_scoring_timeline.csv 読み込み完了。 {len(scoring_timeline_data)} 行")
     except FileNotFoundError:
-        print("[DEBUG] 警告: player_scoring_timeline.csv が見つかりません。")
+        print("警告: スコアリングタイムラインデータが見つかりません。")
         scoring_timeline_data = pd.DataFrame()
 
     template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -401,4 +398,4 @@ if __name__ == "__main__":
     generate_season_player_index(env, base_path, '2024-25', df_players_24_25, df_players_23_24)
     generate_season_player_index(env, base_path, '2023-24', df_players_23_24, df_players_24_25)
 
-    print("\n--- [DEBUG] すべての処理が完了しました ---")
+    print("\n--- すべての処理が完了しました ---")

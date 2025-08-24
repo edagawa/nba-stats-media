@@ -19,8 +19,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Set up Chrome
-        uses: browser-actions/setup-chrome@v1
+      # ▼▼▼ このステップを追加 ▼▼▼
+      - name: Cache generated output folder
+        uses: actions/cache@v4
+        with:
+          path: ./output
+          key: ${{ runner.os }}-output-${{ github.sha }} # コミットごとにキャッシュキーを更新
+          restore-keys: |
+            ${{ runner.os }}-output- # 最新のキャッシュを復元
 
       - name: Install dependencies
         run: |
