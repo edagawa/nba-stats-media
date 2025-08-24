@@ -2,29 +2,31 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>指標の解説 (Glossary) | NBA Stats</title>
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ meta_description }}">
     {% include '_gtm_head.html' %}
-    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="{{ base_path }}/css/style.css">
 </head>
 <body>
     {% include '_gtm_body.html' %}
-    <header>
-        <h1>指標の解説 (Glossary)</h1>
-        <nav>
-            <a href="./index.html">トップページ</a>
-        </nav>
-    </header>
+    {% include '_header.html' %}
     <main class="container">
-        <div class="breadcrumb">
-            <a href="./index.html">トップページ</a> &gt; <span>指標の解説</span>
+        <h1 class="section-title">指標解説</h1>
+        
+        <div class="accordion">
+            {% for item in glossary_items %}
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>{{ item.term }}</span>
+                    <span style="transition: transform 0.3s;">+</span>
+                </button>
+                <div class="accordion-content">
+                    <p>{{ item.description }}</p>
+                </div>
+            </div>
+            {% endfor %}
         </div>
-        {% for item in glossary_items %}
-        <div class="glossary-item">
-            <div class="term">{{ item.term }}</div>
-            <div class="description">{{ item.description }}</div>
-        </div>
-        {% endfor %}
     </main>
-    {% include 'footer.html' %}
+    {% include '_footer.html' %}
 </body>
 </html>

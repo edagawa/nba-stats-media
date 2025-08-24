@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ meta_description }}">
+    <link rel="stylesheet" href="{{ base_path }}/css/style.css">
+</head>
+<body class="{{ team_class }}">
+    {% include '_gtm_body.html' %}
+    {% include '_header.html' %}
+
+    <section class="hero-subpage">
+        <div class="container">
+            <img src="{{ base_path }}/logos/{{ team_name.replace(' ', '_') }}.svg" alt="{{ team_name }} Logo" class="team-logo" onerror="this.style.display='none'">
+            <h1 class="hero-page-title">{{ team_name }}</h1>
+        </div>
+    </section>
+    
+    <main class="container">
+        <div class="card-grid">
+            <div class="card">
+                <h3 class="card-title">チーム情報</h3>
+                <ul class="card-list">
+                    <li><span>アリーナ</span> <span>{{ details.arena | default('N/A') }}</span></li>
+                    <li><span>所在地</span> <span>{{ details.location | default('N/A') }}</span></li>
+                    <li><span>カンファレンス</span> <span>{{ details.conference | default('N/A') }}</span></li>
+                    <li><span>ディビジョン</span> <span>{{ details.division | default('N/A') }}</span></li>
+                    <li><span>優勝回数</span> <span>{{ details.championships | default('N/A') }}</span></li>
+                </ul>
+            </div>
+
+            {% if video_embed_url %}
+            <div class="card">
+                <h3 class="card-title">最新動画</h3>
+                <div class="video-container">
+                    <iframe src="{{ video_embed_url }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <h2 class="section-title">シーズンスタッツ比較</h2>
+        <div class="card-grid">
+            <div class="card">
+                <h3 class="card-title">2023-24シーズン</h3>
+                <table class="stats-table">
+                    <tbody>
+                        {% for stat, value in stats_s1.items() %}
+                        <tr>
+                            <th>{{ stat }}</th>
+                            <td>{{ "%.2f"|format(value) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card">
+                <h3 class="card-title">2024-25シーズン</h3>
+                <table class="stats-table">
+                    <thead>
+                        <tr><th>指標</th><th>数値</th><th>前年比</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for stat, value in stats_s2.items() %}
+                        <tr>
+                            <th>{{ stat }}</th>
+                            <td>{{ "%.2f"|format(value) }}</td>
+                            <td>
+                                {% set change = pct_change.get(stat, 0) %}
+                                {% set is_inverse = stat in inverse_stats %}
+                                {% if (change > 0.1 and not is_inverse) or (change < -0.1 and is_inverse) %}
+                                    <span class="stat-diff stat-diff--up">+{{ "%.1f"|format(change) }}%</span>
+                                {% elif (change < -0.1 and not is_inverse) or (change > 0.1 and is_inverse) %}
+                                    <span class="stat-diff stat-diff--down">{{ "%.1f"|format(change) }}%</span>
+                                {% else %}
+                                    <span>{{ "%.1f"|format(change) }}%</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <h2 class="section-title">所属選手 (2024-25)</h2>
+        <div class="card">
+             {% if player_list %}
+                <ul class="roster-list" style="list-style: none; display: flex; flex-wrap: wrap; gap: 10px;">
+                {% for player in player_list %}
+                    <li style="background: var(--color-background); padding: 5px 10px; border-radius: 5px;"><a href="{{ player.url }}">{{ player.name }}</a></li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>所属選手のデータがありません。</p>
+            {% endif %}
+        </div>
+    </main>
+
+    {% include '_footer.html' %}
+</body>
+</html>

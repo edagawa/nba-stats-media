@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ meta_description }}">
+    {% include '_gtm_head.html' %}
+    <link rel="stylesheet" href="{{ base_path }}/css/style.css">
+</head>
+<body>
+    {% include '_gtm_body.html' %}
+    {% include '_header.html' %}
+    <main class="container">
+        <h1 class="section-title">指標別比較: {{ stat_name_jp }}</h1>
+        
+        <div class="graph-container">
+            <h3>全チーム比較グラフ (2023-24 vs 2024-25)</h3>
+             <figure>
+                <img src="{{ base_path }}/images/stat_{{ stat_name_en }}.svg" alt="{{ stat_name_jp }} 比較グラフ">
+                <button class="zoom-btn" title="拡大表示">🔍</button>
+            </figure>
+            <p>2024-25シーズンのスタッツを基準にソートしています。</p>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">詳細データ</h3>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>チーム</th>
+                        <th>2023-24</th>
+                        <th>2024-25</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team, row in data_table.iterrows() %}
+                    <tr>
+                        <td><a href="{{ base_path }}/teams/{{ team.replace(' ', '-').lower() }}.html">{{ team }}</a></td>
+                        <td>{{ "%.2f"|format(row['2023-24']) }}</td>
+                        <td>{{ "%.2f"|format(row['2024-25']) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+    {% include '_footer.html' %}
+</body>
+</html>

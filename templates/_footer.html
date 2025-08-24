@@ -1,0 +1,18 @@
+<footer class="footer">
+    <div class="container">
+        <div class="footer-nav">
+            {% for page in stat_pages %}
+            <a href="{{ page.url }}">{{ page.name }}</a>
+            {% endfor %}
+        </div>
+        <p>&copy; 2024 NBA Stats Media. All rights reserved.</p>
+    </div>
+</footer>
+
+<div class="modal">
+    <button class="modal-close">&times;</button>
+    <div class="modal-content">
+        </div>
+</div>
+
+<script src="{{ base_path }}/js/main.js"></script>

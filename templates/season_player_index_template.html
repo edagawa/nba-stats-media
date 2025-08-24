@@ -2,53 +2,59 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>NBA {{ season_str }}シーズン | 選手スタッツリーダー</title>
-    <meta name="description" content="NBA {{ season_str }}シーズンの主要スタッツ（得点、リバウンド、アシストなど）におけるトップ10選手ランキング。グラフで前年からの変動も確認できます。">
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ meta_description }}">
     {% include '_gtm_head.html' %}
     <link rel="stylesheet" href="{{ base_path }}/css/style.css">
 </head>
 <body>
     {% include '_gtm_body.html' %}
-    <header>
-        <h1>NBA Stats Media</h1>
-        <nav>
-            <a href="{{ base_path }}/index.html">トップ</a> |
-            <a href="{{ glossary_url }}">指標解説</a>
-        </nav>
-    </header>
+    {% include '_header.html' %}
 
     <main class="container">
-        <div class="intro">
-            <h2>{{ season_str }}シーズン 選手スタッツリーダー</h2>
-            <p>このページでは、{{ season_str }}シーズンの主要カテゴリにおける個人成績トップ10の選手と、そのスタッツを前年と比較したグラフを掲載しています。</p>
-        </div>
+        <h1 class="section-title">{{ season_str }}シーズン 選手スタッツリーダー</h1>
+        <p style="text-align: center; max-width: 800px; margin: -20px auto 40px; color: var(--color-text-secondary);">
+            このページでは、{{ season_str }}シーズンの主要カテゴリにおける個人成績トップ10の選手と、そのスタッツを前年と比較したグラフを掲載しています。
+        </p>
+        
+        {% for stat_info in leaders_with_graphs %}
+        <div class="graph-container">
+            <h3>{{ stat_info.stat_jp }} Top 10</h3>
+            <figure>
+                <img src="{{ base_path }}/images/season_leaders/{{ season_str }}_{{ stat_info.stat_en }}.svg" alt="{{ season_str }}シーズン {{ stat_info.stat_jp }} トップ10選手の前年比較グラフ">
+                 <button class="zoom-btn" title="拡大表示">🔍</button>
+            </figure>
 
-        <section class="leaderboard-section">
-            <div class="leaderboard-grid">
-                {% for stat_info in leaders_with_graphs %}
-                <div class="leaderboard-card">
-                    
-                    <h3>{{ stat_info.stat_jp }}</h3>
-                    
-                    <img src="{{ stat_info.graph_url }}" alt="{{ season_str }}シーズン {{ stat_info.stat_jp }} トップ10選手の前年比較グラフ">
-                    
-                    <ol>
+            <div class="card" style="margin-top: 20px;">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>順位</th>
+                            <th>選手</th>
+                            <th>数値</th>
+                            <th>前年差</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         {% for player in stat_info.data %}
-                        <li>
-                            <span class="rank">{{ loop.index }}</span>
-                            <span class="name"><a href="{{ player.url }}">{{ player.Player }}</a></span>
-                            <span class="value">{{ '%.1f'|format(player.value) }}</span>
-                            <span class="change {{ 'positive' if player.change > 0 else 'negative' if player.change < 0 else 'neutral' }}">
-                                ({{ '%+.1f'|format(player.change) }})
-                            </span>
-                        </li>
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><a href="{{ player.url }}">{{ player.Player }}</a></td>
+                            <td>{{ '%.1f'|format(player.value) }}</td>
+                            <td>
+                                {% if player.change > 0.1 %}<span class="stat-diff stat-diff--up">+{{ '%.1f'|format(player.change) }}</span>
+                                {% elif player.change < -0.1 %}<span class="stat-diff stat-diff--down">{{ '%.1f'|format(player.change) }}</span>
+                                {% else %}<span>{{ '%.1f'|format(player.change) }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </ol>
-                </div>
-                {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        </section>
+        </div>
+        {% endfor %}
     </main>
-    {% include 'footer.html' %}
+    {% include '_footer.html' %}
 </body>
 </html>

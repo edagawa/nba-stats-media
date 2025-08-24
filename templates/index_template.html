@@ -2,79 +2,80 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>NBA Stats Media - チーム＆選手スタッツ比較サイト</title> 
-    <meta name="description" content="NBAのチームと選手の詳細なスタッツを比較・分析。2023-24シーズンと2024-25シーズンのデータを基に、パフォーマンスの変動や特徴を可視化します。">
+    <title>{{ page_title }}</title>  
+    <meta name="description" content="{{ meta_description }}">
     {% include '_gtm_head.html' %}
     <link rel="stylesheet" href="{{ base_path }}/css/style.css">
 </head>
 <body>
     {% include '_gtm_body.html' %}
-    <header>
-        <h1>NBA Stats Media</h1>
-        <nav><a href="{{ glossary_url }}">指標解説</a></nav>
-    </header>
-    <main class="container">
-        <div class="intro">
-            <h2>NBAのディープな世界へようこそ</h2>
-            <p>このサイトは、NBAの公式スタッツデータを基に、チームと選手のパフォーマンスを多角的に分析・可視化しています。2023-24シーズンと2024-25シーズンのデータを比較し、各チームや選手の成長、変化を追いかけましょう。</p>
+    {% include '_header.html' %}
+    
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">NBAのディープな世界へようこそ</h1>
+            <p class="hero-subtitle">このサイトは、NBAの公式スタッツデータを基に、チームと選手のパフォーマンスを多角的に分析・可視化しています。2023-24シーズンと2024-25シーズンのデータを比較し、各チームや選手の成長、変化を追いかけましょう。</p>
         </div>
+    </section>
+
+    <main class="container">
         {% if main_video_embed_url %}
-        <section class="video-section">
-            <h2>NBA 最新ハイライト</h2>
+        <section class="video-section" style="margin-bottom: calc(var(--spacing-unit) * 4);">
+            <h2 class="section-title">NBA 最新ハイライト</h2>
             <div class="video-container">
                 <iframe src="{{ main_video_embed_url }}" title="NBA公式 最新YouTube動画" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
         </section>
         {% endif %}
 
-        <section class="leaderboard-section">
-            <h2>選手別スタッツリーダー (Top 5)</h2>
-            <p class="description">2024-25シーズンの主要カテゴリにおける個人成績トップ5の選手です。矢印 (▲▼) は前年からの成績の変動を示しており、選手の成長や役割の変化を読み解くことができます。各指標名をクリックすると、全選手のランキングページへ移動します。</p>
-            <div class="leaderboard-grid">
-                {% for stat_name, leaders in top_players_by_stat.items() %}
-                <div class="leaderboard-card">
-                    <h3><a href="{{ leaders.url }}">{{ stat_name }}</a></h3>
-                    <ol>
+        <h2 class="section-title">2024-25シーズン スタッツリーダー</h2>
+        <div class="card-grid">
+            {% for stat_name, leaders in top_players_by_stat.items() %}
+            <div class="card">
+                <h3 class="card-title"><a href="{{ leaders.url }}">{{ stat_name }} Top 5</a></h3>
+                <table class="stats-table">
+                    <tbody>
                         {% for player in leaders.data %}
-                        <li>
-                            <span class="rank">{{ loop.index }}</span>
-                            <span class="name"><a href="{{ player.url }}">{{ player.Player }}</a></span>
-                            <span class="value">{{ '%.1f'|format(player.value) }}</span>
-                            <span class="change {{ 'positive' if player.change > 0 else 'negative' if player.change < 0 else 'neutral' }}">
-                                ({{ '%+.1f'|format(player.change) }})
-                            </span>
-                        </li>
+                        <tr>
+                            <td>{{ loop.index }}. <a href="{{ player.url }}">{{ player.Player }}</a></td>
+                            <td>{{ '%.1f'|format(player.value) }}</td>
+                            <td>
+                                {% if player.change > 0.1 %}<span class="stat-diff stat-diff--up">(+{{ '%.1f'|format(player.change) }})</span>
+                                {% elif player.change < -0.1 %}<span class="stat-diff stat-diff--down">({{ '%.1f'|format(player.change) }})</span>
+                                {% endif %}
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </ol>
-                </div>
-                {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        </section>
+            {% endfor %}
 
-        <section class="leaderboard-section">
-            <h2>チーム別スタッツリーダー (Top 5)</h2>
-            <p class="description">2024-25シーズンのチーム成績を、現代バスケで重要視される効率性（オフェンス効率・ディフェンス効率）と試合のペースでランキング化しました。チーム全体の戦術や強み、弱みがどこにあるのかを探ります。</p>
-            <div class="leaderboard-grid">
-                {% for stat_name, leaders in top_teams_by_stat.items() %}
-                <div class="leaderboard-card">
-                    <h3><a href="{{ leaders.url }}">{{ stat_name }}</a></h3>
-                    <ol>
+            {% for stat_name, leaders in top_teams_by_stat.items() %}
+            <div class="card">
+                <h3 class="card-title"><a href="{{ leaders.url }}">{{ stat_name }} Top 5</a></h3>
+                <table class="stats-table">
+                     <tbody>
                         {% for team in leaders.data %}
-                        <li>
-                            <span class="rank">{{ loop.index }}</span>
-                            <span class="name"><a href="{{ team.url }}">{{ team.Team }}</a></span>
-                            <span class="value">{{ '%.1f'|format(team.value) }}</span>
-                            <span class="change {{ 'positive' if (stat_name != 'ディフェンス効率' and team.change > 0) or (stat_name == 'ディフェンス効率' and team.change < 0) else 'negative' }}">
-                                ({{ '%+.1f'|format(team.change) }})
-                            </span>
-                        </li>
+                        <tr>
+                            <td>{{ loop.index }}. <a href="{{ team.url }}">{{ team.Team }}</a></td>
+                            <td>{{ '%.1f'|format(team.value) }}</td>
+                            <td>
+                                {% set is_inverse = stat_name == 'ディフェンス効率' %}
+                                {% if (team.change > 0.1 and not is_inverse) or (team.change < -0.1 and is_inverse) %}
+                                    <span class="stat-diff stat-diff--up">(+{{ '%.1f'|format(team.change) }})</span>
+                                {% elif (team.change < -0.1 and not is_inverse) or (team.change > 0.1 and is_inverse) %}
+                                    <span class="stat-diff stat-diff--down">({{ '%.1f'|format(team.change) }})</span>
+                                {% endif %}
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </ol>
-                </div>
-                {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        </section>
+            {% endfor %}
+        </div>
     </main>
-    {% include 'footer.html' %}
+    {% include '_footer.html' %}
 </body>
 </html>
