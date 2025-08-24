@@ -1,4 +1,4 @@
-# main.py (チーム詳細データ追加版)
+# main.py (グラフ修正版)
 
 import os
 import sys
@@ -13,8 +13,7 @@ import json
 import unicodedata
 import traceback
 
-# ★★★ 追加 ★★★
-# ファイルが最新かどうかをチェックするヘルパー関数
+# (is_file_up_to_date, normalize_name, 各種定数 は変更なし)
 def is_file_up_to_date(output_path, dependencies):
     if not os.path.exists(output_path):
         return False
@@ -23,17 +22,12 @@ def is_file_up_to_date(output_path, dependencies):
         if os.path.exists(dep) and os.path.getmtime(dep) > output_mtime:
             return False
     return True
-
 def normalize_name(name):
     if not isinstance(name, str): return ""
     name = "".join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
     name = re.sub(r'\s+(Jr|Sr|II|III|IV|V)\.?$', '', name, flags=re.IGNORECASE)
     return name.strip()
-
 CONFERENCE_STRUCTURE = { "Western Conference": { "Northwest Division": ["Denver Nuggets", "Minnesota Timberwolves", "Oklahoma City Thunder", "Portland Trail Blazers", "Utah Jazz"], "Pacific Division": ["Golden State Warriors", "LA Clippers", "Los Angeles Lakers", "Phoenix Suns", "Sacramento Kings"], "Southwest Division": ["Dallas Mavericks", "Houston Rockets", "Memphis Grizzlies", "New Orleans Pelicans", "San Antonio Spurs"] }, "Eastern Conference": { "Atlantic Division": ["Boston Celtics", "Brooklyn Nets", "New York Knicks", "Philadelphia 76ers", "Toronto Raptors"], "Central Division": ["Chicago Bulls", "Cleveland Cavaliers", "Detroit Pistons", "Indiana Pacers", "Milwaukee Bucks"], "Southeast Division": ["Atlanta Hawks", "Charlotte Hornets", "Miami Heat", "Orlando Magic", "Washington Wizards"] } }
-
-# ★★★ 修正箇所 ★★★
-# TEAM_DETAILSにアリーナ、所在地、優勝回数の情報を追加
 TEAM_DETAILS = {
     "Atlanta Hawks": {"conference": "Eastern", "division": "Southeast", "arena": "State Farm Arena", "location": "ジョージア州アトランタ", "championships": 1},
     "Boston Celtics": {"conference": "Eastern", "division": "Atlantic", "arena": "TD Garden", "location": "マサチューセッツ州ボストン", "championships": 17},
@@ -66,12 +60,10 @@ TEAM_DETAILS = {
     "Utah Jazz": {"conference": "Western", "division": "Northwest", "arena": "Delta Center", "location": "ユタ州ソルトレイクシティ", "championships": 0},
     "Washington Wizards": {"conference": "Eastern", "division": "Southeast", "arena": "Capital One Arena", "location": "ワシントンD.C.", "championships": 1}
 }
-
 STATS_TO_GENERATE = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
 TEAM_NAME_MAP = { "Atlanta": "Atlanta Hawks", "Boston": "Boston Celtics", "Brooklyn": "Brooklyn Nets", "Charlotte": "Charlotte Hornets", "Chicago": "Chicago Bulls", "Cleveland": "Cleveland Cavaliers", "Dallas": "Dallas Mavericks", "Denver": "Denver Nuggets", "Detroit": "Detroit Pistons", "Golden State": "Golden State Warriors", "Houston": "Houston Rockets", "Indiana": "Indiana Pacers", "LA Clippers": "LA Clippers", "LA Lakers": "Los Angeles Lakers", "Memphis": "Memphis Grizzlies", "Miami": "Miami Heat", "Milwaukee": "Milwaukee Bucks", "Minnesota": "Minnesota Timberwolves", "New Orleans": "New Orleans Pelicans", "New York": "New York Knicks", "Oklahoma City": "Oklahoma City Thunder", "Orlando": "Orlando Magic", "Philadelphia": "Philadelphia 76ers", "Phoenix": "Phoenix Suns", "Portland": "Portland Trail Blazers", "Sacramento": "Sacramento Kings", "San Antonio": "San Antonio Spurs", "Toronto": "Toronto Raptors", "Utah": "Utah Jazz", "Washington": "Washington Wizards" }
 
-
-# (以降の関数は変更ありません)
+# (generate_team_summary, get_footer_data, generate_main_index, generate_glossary_page, generate_comparison_pages, generate_stat_pages は変更なし)
 def generate_team_summary(s1_stats, s2_stats):
     if s2_stats.empty: return ""
     STAT_INFO = { 'OFF EFF': {'jp': 'オフェンス'}, 'DEF EFF': {'jp': 'ディフェンス'}, 'PACE': {'jp': '試合のペース'} }
@@ -214,6 +206,9 @@ def generate_stat_pages(df_s1, df_s2, env, base_path):
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e: print(f"エラー: {stat_full} のページ生成中に問題が発生しました: {e}")
     print("--- 指標別ランキングページの生成完了 ---")
+
+
+# ★★★ この関数全体を修正 ★★★
 def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map, base_path):
     print("--- 選手ページの生成開始 ---")
     if df_s1_raw is None or df_s2_raw is None:
@@ -263,7 +258,20 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
             team_name = player_team_map.get(player_name, ''); team_url = ""
             if team_name: team_url = f"{base_path}/teams/comparison_{team_name.replace(' ', '_')}.html"
-            render_data = { 'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 'player_info': stats_s2_table.T.to_dict('records')[0], 'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 'team_name': team_name, 'team_url': team_url, 'glossary_url': f'{base_path}/glossary.html','has_s1_data': has_s1_data, 'has_timeline_23_24': False, 'has_timeline_24_25': False }
+            
+            render_data = { 
+                'base_path': base_path, 'player_name': player_name, 'player_filename': player_filename, 
+                'player_info': stats_s2_table.T.to_dict('records')[0], 
+                'stats_s1': stats_s1_table.to_html(header=False, na_rep='-'), 
+                'stats_s2': stats_s2_table.to_html(header=False, na_rep='-'), 
+                'stat_pages': stat_pages_footer, 'all_teams_structured': all_teams_structured_footer, 
+                'team_name': team_name, 'team_url': team_url, 
+                'glossary_url': f'{base_path}/glossary.html',
+                'has_s1_data': has_s1_data, 
+                'has_timeline_23_24': False, 
+                'has_timeline_24_25': False
+            }
+
             if has_s1_data:
                 graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
@@ -277,46 +285,64 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 ax.set_xticks(x); ax.set_xticklabels(stats_to_compare); ax.legend(); fig.tight_layout()
                 plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
                 plt.close(fig)
+
+            # --- グラフ生成ロジックを全面的に修正 ---
             for season_str_short in ["23-24", "24-25"]:
                 season_str_long = f"20{season_str_short}"
                 player_timeline = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == season_str_long)]
+                
                 if player_timeline.empty: continue
+                
                 if season_str_short == "23-24":
                     render_data['has_timeline_23_24'] = True
                     render_data['comment_23_24'] = generate_player_comment(player_name, season_str_long, player_timeline)
                 elif season_str_short == "24-25":
                     render_data['has_timeline_24_25'] = True
                     render_data['comment_24_25'] = generate_player_comment(player_name, season_str_long, player_timeline)
+                
                 made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1].copy()
                 if not made_shots.empty:
                     point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
                     made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
-                    made_shots_sorted = made_shots.sort_values('absolute_minute')
-                    made_shots_sorted['CUM_POINTS'] = made_shots_sorted['POINTS'].cumsum()
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    ax.plot(made_shots_sorted['absolute_minute'], made_shots_sorted['CUM_POINTS'], marker='o', linestyle='-')
+                    
+                    # 1分ごとの得点データを集計
+                    made_shots['minute_bin'] = np.floor(made_shots['absolute_minute'])
+                    scoring_by_minute = pd.pivot_table(
+                        made_shots,
+                        values='POINTS',
+                        index='minute_bin',
+                        columns='SHOT_TYPE',
+                        aggfunc='sum'
+                    ).fillna(0)
+                    
+                    # 棒グラフ用にカラムを整理
+                    for shot_type in ['FT', '2PT', '3PT']:
+                        if shot_type not in scoring_by_minute.columns:
+                            scoring_by_minute[shot_type] = 0
+                    
+                    scoring_by_minute = scoring_by_minute[['FT', '2PT', '3PT']] # 積み上げ順
+                    
+                    # 積み上げ棒グラフを生成
+                    fig, ax = plt.subplots(figsize=(12, 7))
+                    scoring_by_minute.plot(kind='bar', stacked=True, ax=ax, width=0.8,
+                                           color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
+                    
                     ax.set_title(f'{player_name} Scoring Timeline ({season_str_long})')
-                    ax.set_xlabel('Game Minute'); ax.set_ylabel('Cumulative Points')
-                    ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
-                    ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
-                    plt.savefig(f"output/images/players/timeline_points_{season_str_short}_{player_filename}.svg", format="svg")
+                    ax.set_xlabel('Game Minute')
+                    ax.set_ylabel('Points Scored')
+                    ax.legend(title='Shot Type')
+                    ax.grid(True, axis='y', linestyle='--', alpha=0.6)
+                    
+                    # X軸のラベルを調整（多すぎると見づらくなるため）
+                    tick_labels = [item.get_text() for item in ax.get_xticklabels()]
+                    new_tick_labels = [label if int(float(label)) % 5 == 0 or int(float(label)) in [11, 23, 35, 47] else '' for label in tick_labels]
+                    ax.set_xticklabels(new_tick_labels, rotation=45)
+                    
+                    fig.tight_layout()
+                    graph_path = f"output/images/players/timeline_stacked_{season_str_short}_{player_filename}.svg"
+                    plt.savefig(graph_path, format="svg")
                     plt.close(fig)
-                shots_made = player_timeline[player_timeline['MADE_FLAG'] == 1]
-                shots_missed = player_timeline[player_timeline['MADE_FLAG'] == 0]
-                shot_type_y_map = {'3PT': 3, '2PT': 2, 'FT': 1}
-                fig, ax = plt.subplots(figsize=(10, 6))
-                if not shots_made.empty:
-                    ax.scatter(shots_made['absolute_minute'], shots_made['SHOT_TYPE'].map(shot_type_y_map), c='blue', label='Made', alpha=0.7)
-                if not shots_missed.empty:
-                    ax.scatter(shots_missed['absolute_minute'], shots_missed['SHOT_TYPE'].map(shot_type_y_map), c='red', marker='x', label='Missed', alpha=0.7)
-                ax.set_title(f'{player_name} Shot Attempts ({season_str_long})')
-                ax.set_xlabel('Game Minute'); ax.set_ylabel('Shot Type')
-                ax.set_yticks(list(shot_type_y_map.values())); ax.set_yticklabels(list(shot_type_y_map.keys()))
-                ax.set_xticks([0, 12, 24, 36, 48]); ax.set_xticklabels(['Start', 'Q1 End', 'Half', 'Q3 End', 'End'])
-                ax.legend(); ax.grid(True, linestyle='--', alpha=0.6); fig.tight_layout()
-                plt.savefig(f"output/images/players/timeline_attempts_{season_str_short}_{player_filename}.svg", format="svg")
-                plt.close(fig)
-            
+
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(template.render(render_data))
             print(f"生成完了: {output_path}")
@@ -325,6 +351,9 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             print(f"警告: {player_name} のページ生成中にエラー: {e}")
             traceback.print_exc()
     print("--- 選手ページの生成完了 ---")
+
+
+# (generate_season_player_index と if __name__ == "__main__": は変更なし)
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
     print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
     if df_current is None:
