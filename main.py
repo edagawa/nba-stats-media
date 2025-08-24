@@ -1,4 +1,4 @@
-# main.py (グラフタイトル修正版)
+# main.py (前年比データ追加版)
 
 import os
 import sys
@@ -13,7 +13,7 @@ import json
 import unicodedata
 import traceback
 
-# (is_file_up_to_date, normalize_name, 各種定数 は変更なし)
+# (is_file_up_to_dateからgenerate_glossary_pageまでは変更なし)
 def is_file_up_to_date(output_path, dependencies):
     if not os.path.exists(output_path):
         return False
@@ -62,8 +62,6 @@ TEAM_DETAILS = {
 }
 STATS_TO_GENERATE = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
 TEAM_NAME_MAP = { "Atlanta": "Atlanta Hawks", "Boston": "Boston Celtics", "Brooklyn": "Brooklyn Nets", "Charlotte": "Charlotte Hornets", "Chicago": "Chicago Bulls", "Cleveland": "Cleveland Cavaliers", "Dallas": "Dallas Mavericks", "Denver": "Denver Nuggets", "Detroit": "Detroit Pistons", "Golden State": "Golden State Warriors", "Houston": "Houston Rockets", "Indiana": "Indiana Pacers", "LA Clippers": "LA Clippers", "LA Lakers": "Los Angeles Lakers", "Memphis": "Memphis Grizzlies", "Miami": "Miami Heat", "Milwaukee": "Milwaukee Bucks", "Minnesota": "Minnesota Timberwolves", "New Orleans": "New Orleans Pelicans", "New York": "New York Knicks", "Oklahoma City": "Oklahoma City Thunder", "Orlando": "Orlando Magic", "Philadelphia": "Philadelphia 76ers", "Phoenix": "Phoenix Suns", "Portland": "Portland Trail Blazers", "Sacramento": "Sacramento Kings", "San Antonio": "San Antonio Spurs", "Toronto": "Toronto Raptors", "Utah": "Utah Jazz", "Washington": "Washington Wizards" }
-
-# (generate_team_summaryからgenerate_stat_pagesまでは変更なし)
 def generate_team_summary(s1_stats, s2_stats):
     if s2_stats.empty: return ""
     STAT_INFO = { 'OFF EFF': {'jp': 'オフェンス'}, 'DEF EFF': {'jp': 'ディフェンス'}, 'PACE': {'jp': '試合のペース'} }
@@ -131,6 +129,8 @@ def generate_glossary_page(env, base_path):
     render_data = {'base_path': base_path, 'glossary_items': glossary_items, 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured, 'glossary_url': f'{base_path}/glossary.html'}
     with open("output/glossary.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
     print("--- 指標解説ページの生成完了 ---")
+
+# ★★★ この関数を修正 ★★★
 def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_team_map, base_path):
     print("--- チーム別比較ページの生成開始 ---")
     df_s1_indexed = df_s1.set_index('Team')
@@ -143,6 +143,9 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_
     active_players_s2 = set()
     if df_players is not None:
         active_players_s2 = set(df_players['Player'])
+        
+    # 低い方が良い指標のリスト
+    inverse_stats = ['DEF EFF', 'TO']
 
     for team in all_teams:
         try:
@@ -161,6 +164,11 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_
 
             stats1 = df_s1_indexed.loc[team]
             stats2 = df_s2_indexed.loc[team]
+            
+            # 前年比を計算
+            pct_change = ((stats2 - stats1) / stats1.abs()).fillna(0) * 100
+
+            # グラフ生成
             stats_for_graph1 = stats1[stats_to_compare]
             stats_for_graph2 = stats2[stats_to_compare]
             x = np.arange(len(stats_to_compare)); width = 0.35
@@ -181,12 +189,24 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_
 
             video_id = video_data.get(team)
             video_embed_url = f"https://www.youtube.com/embed/{video_id}" if video_id else None
-            render_data = { 'base_path': base_path, 'team_name': team, 'image_filename': image_filename, 'stats_s1': stats1.to_frame(name='Value').to_html(), 'stats_s2': stats2.to_frame(name='Value').to_html(), 'details': TEAM_DETAILS.get(team, {}), 'all_teams_structured': all_teams_structured_footer, 'stat_pages': stat_pages_footer, 'summary_text': summary, 'player_list': player_list, 'video_embed_url': video_embed_url, 'glossary_url': f'{base_path}/glossary.html' }
+
+            # HTML生成のためのデータを準備
+            render_data = {
+                'base_path': base_path, 'team_name': team, 'image_filename': image_filename,
+                'stats_s1': stats1, 'stats_s2': stats2, 'pct_change': pct_change, 'inverse_stats': inverse_stats,
+                'details': TEAM_DETAILS.get(team, {}),
+                'all_teams_structured': all_teams_structured_footer,
+                'stat_pages': stat_pages_footer,
+                'summary_text': summary, 'player_list': player_list, 'video_embed_url': video_embed_url,
+                'glossary_url': f'{base_path}/glossary.html'
+            }
             
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
             print(f"生成完了: {output_path}")
         except Exception as e: print(f"警告: {team} の比較ページ生成中にエラーが発生しました。詳細: {e}")
     print("--- チーム別比較ページの生成完了 ---")
+
+# (以降の関数は変更なし)
 def generate_stat_pages(df_s1, df_s2, env, base_path):
     print("--- 指標別ランキングページの生成開始 ---")
     template = env.get_template('stat_comparison_template.html')
@@ -206,8 +226,6 @@ def generate_stat_pages(df_s1, df_s2, env, base_path):
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e: print(f"エラー: {stat_full} のページ生成中に問題が発生しました: {e}")
     print("--- 指標別ランキングページの生成完了 ---")
-
-
 def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map, base_path):
     print("--- 選手ページの生成開始 ---")
     if df_s1_raw is None or df_s2_raw is None:
@@ -340,7 +358,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                     scoring_23_24 = scoring_23_24.reindex(full_index, fill_value=0)
                     scoring_24_25 = scoring_24_25.reindex(full_index, fill_value=0)
                     
-                    # ★★★ 修正箇所1 ★★★ タイトルを英語に変更
                     diff_abs = (scoring_24_25 - scoring_23_24)[['FT', '2PT', '3PT']]
                     fig, ax = plt.subplots(figsize=(12, 7))
                     diff_abs.plot(kind='bar', ax=ax, width=0.8, color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
@@ -353,7 +370,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                     fig.tight_layout()
                     plt.savefig(f"output/images/players/timeline_diff_abs_{player_filename}.svg", format="svg"); plt.close(fig)
 
-                    # ★★★ 修正箇所2 ★★★ タイトルを英語に変更
                     diff_pct = (scoring_24_25 - scoring_23_24).divide(scoring_23_24.replace(0, np.nan)).fillna(0) * 100
                     diff_pct = diff_pct[['FT', '2PT', '3PT']]
                     fig, ax = plt.subplots(figsize=(12, 7))
@@ -375,8 +391,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             print(f"警告: {player_name} のページ生成中にエラー: {e}")
             traceback.print_exc()
     print("--- 選手ページの生成完了 ---")
-
-
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
     print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
     if df_current is None:

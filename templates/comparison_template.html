@@ -55,17 +55,53 @@
                     <figcaption>各指標のリーグ内偏差値をレーダーチャートで表示</figcaption>
                 </figure>
             </section>
+            
             <div class="seasons-container">
                 <div class="season-card">
                     <h3>2023-24シーズン</h3>
-                    {{ stats_s1|safe }}
+                    <table class="stats-table">
+                        <tbody>
+                            {% for stat, value in stats_s1.items() %}
+                            <tr>
+                                <th>{{ stat }}</th>
+                                <td>{{ "%.2f"|format(value) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
                 <div class="season-card">
                     <h3>2024-25シーズン</h3>
-                    {{ stats_s2|safe }}
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>指標</th>
+                                <th>数値</th>
+                                <th>前年比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat, value in stats_s2.items() %}
+                            <tr>
+                                <th>{{ stat }}</th>
+                                <td>{{ "%.2f"|format(value) }}</td>
+                                <td>
+                                    {% set change = pct_change.get(stat, 0) %}
+                                    {% set is_inverse = stat in inverse_stats %}
+                                    {% if (change > 0.1 and not is_inverse) or (change < -0.1 and is_inverse) %}
+                                        <span class="change-positive">+{{ "%.1f"|format(change) }}%</span>
+                                    {% elif (change < -0.1 and not is_inverse) or (change > 0.1 and is_inverse) %}
+                                        <span class="change-negative">{{ "%.1f"|format(change) }}%</span>
+                                    {% else %}
+                                        <span>{{ "%.1f"|format(change) }}%</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            
             <section class="roster-section">
                 <h2>所属選手 (2024-25)</h2>
                 {% if player_list %}
@@ -78,7 +114,7 @@
                     <p>所属選手のデータがありません。</p>
                 {% endif %}
             </section>
-            </main>
+        </main>
     </div>
     {% include 'footer.html' %}
 </body>
