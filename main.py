@@ -1,4 +1,4 @@
-# main.py (キャッシュ対応・高速化版)
+# main.py (チーム詳細データ追加版)
 
 import os
 import sys
@@ -30,14 +30,48 @@ def normalize_name(name):
     name = re.sub(r'\s+(Jr|Sr|II|III|IV|V)\.?$', '', name, flags=re.IGNORECASE)
     return name.strip()
 
-# (CONFERENCE_STRUCTURE, TEAM_DETAILSなどの定数は変更なし)
 CONFERENCE_STRUCTURE = { "Western Conference": { "Northwest Division": ["Denver Nuggets", "Minnesota Timberwolves", "Oklahoma City Thunder", "Portland Trail Blazers", "Utah Jazz"], "Pacific Division": ["Golden State Warriors", "LA Clippers", "Los Angeles Lakers", "Phoenix Suns", "Sacramento Kings"], "Southwest Division": ["Dallas Mavericks", "Houston Rockets", "Memphis Grizzlies", "New Orleans Pelicans", "San Antonio Spurs"] }, "Eastern Conference": { "Atlantic Division": ["Boston Celtics", "Brooklyn Nets", "New York Knicks", "Philadelphia 76ers", "Toronto Raptors"], "Central Division": ["Chicago Bulls", "Cleveland Cavaliers", "Detroit Pistons", "Indiana Pacers", "Milwaukee Bucks"], "Southeast Division": ["Atlanta Hawks", "Charlotte Hornets", "Miami Heat", "Orlando Magic", "Washington Wizards"] } }
-TEAM_DETAILS = { "Atlanta Hawks": {"conference": "Eastern", "division": "Southeast"}, "Boston Celtics": {"conference": "Eastern", "division": "Atlantic"}, "Brooklyn Nets": {"conference": "Eastern", "division": "Atlantic"}, "Charlotte Hornets": {"conference": "Eastern", "division": "Southeast"}, "Chicago Bulls": {"conference": "Eastern", "division": "Central"}, "Cleveland Cavaliers": {"conference": "Eastern", "division": "Central"}, "Dallas Mavericks": {"conference": "Western", "division": "Southwest"}, "Denver Nuggets": {"conference": "Western", "division": "Northwest"}, "Detroit Pistons": {"conference": "Eastern", "division": "Central"}, "Golden State Warriors": {"conference": "Western", "division": "Pacific"}, "Houston Rockets": {"conference": "Western", "division": "Southwest"}, "Indiana Pacers": {"conference": "Eastern", "division": "Central"}, "LA Clippers": {"conference": "Western", "division": "Pacific"}, "Los Angeles Lakers": {"conference": "Western", "division": "Pacific"}, "Memphis Grizzlies": {"conference": "Western", "division": "Southwest"}, "Miami Heat": {"conference": "Eastern", "division": "Southeast"}, "Milwaukee Bucks": {"conference": "Eastern", "division": "Central"}, "Minnesota Timberwolves": {"conference": "Western", "division": "Northwest"}, "New Orleans Pelicans": {"conference": "Western", "division": "Southwest"}, "New York Knicks": {"conference": "Eastern", "division": "Atlantic"}, "Oklahoma City Thunder": {"conference": "Western", "division": "Northwest"}, "Orlando Magic": {"conference": "Eastern", "division": "Southeast"}, "Philadelphia 76ers": {"conference": "Eastern", "division": "Atlantic"}, "Phoenix Suns": {"conference": "Western", "division": "Pacific"}, "Portland Trail Blazers": {"conference": "Western", "division": "Northwest"}, "Sacramento Kings": {"conference": "Western", "division": "Pacific"}, "San Antonio Spurs": {"conference": "Western", "division": "Southwest"}, "Toronto Raptors": {"conference": "Eastern", "division": "Atlantic"}, "Utah Jazz": {"conference": "Western", "division": "Northwest"}, "Washington Wizards": {"conference": "Eastern", "division": "Southeast"} }
+
+# ★★★ 修正箇所 ★★★
+# TEAM_DETAILSにアリーナ、所在地、優勝回数の情報を追加
+TEAM_DETAILS = {
+    "Atlanta Hawks": {"conference": "Eastern", "division": "Southeast", "arena": "State Farm Arena", "location": "ジョージア州アトランタ", "championships": 1},
+    "Boston Celtics": {"conference": "Eastern", "division": "Atlantic", "arena": "TD Garden", "location": "マサチューセッツ州ボストン", "championships": 17},
+    "Brooklyn Nets": {"conference": "Eastern", "division": "Atlantic", "arena": "Barclays Center", "location": "ニューヨーク州ブルックリン", "championships": 0},
+    "Charlotte Hornets": {"conference": "Eastern", "division": "Southeast", "arena": "Spectrum Center", "location": "ノースカロライナ州シャーロット", "championships": 0},
+    "Chicago Bulls": {"conference": "Eastern", "division": "Central", "arena": "United Center", "location": "イリノイ州シカゴ", "championships": 6},
+    "Cleveland Cavaliers": {"conference": "Eastern", "division": "Central", "arena": "Rocket Mortgage FieldHouse", "location": "オハイオ州クリーブランド", "championships": 1},
+    "Dallas Mavericks": {"conference": "Western", "division": "Southwest", "arena": "American Airlines Center", "location": "テキサス州ダラス", "championships": 1},
+    "Denver Nuggets": {"conference": "Western", "division": "Northwest", "arena": "Ball Arena", "location": "コロラド州デンバー", "championships": 1},
+    "Detroit Pistons": {"conference": "Eastern", "division": "Central", "arena": "Little Caesars Arena", "location": "ミシガン州デトロイト", "championships": 3},
+    "Golden State Warriors": {"conference": "Western", "division": "Pacific", "arena": "Chase Center", "location": "カリフォルニア州サンフランシスコ", "championships": 7},
+    "Houston Rockets": {"conference": "Western", "division": "Southwest", "arena": "Toyota Center", "location": "テキサス州ヒューストン", "championships": 2},
+    "Indiana Pacers": {"conference": "Eastern", "division": "Central", "arena": "Gainbridge Fieldhouse", "location": "インディアナ州インディアナポリス", "championships": 0},
+    "LA Clippers": {"conference": "Western", "division": "Pacific", "arena": "Intuit Dome", "location": "カリフォルニア州イングルウッド", "championships": 0},
+    "Los Angeles Lakers": {"conference": "Western", "division": "Pacific", "arena": "Crypto.com Arena", "location": "カリフォルニア州ロサンゼルス", "championships": 17},
+    "Memphis Grizzlies": {"conference": "Western", "division": "Southwest", "arena": "FedExForum", "location": "テネシー州メンフィス", "championships": 0},
+    "Miami Heat": {"conference": "Eastern", "division": "Southeast", "arena": "Kaseya Center", "location": "フロリダ州マイアミ", "championships": 3},
+    "Milwaukee Bucks": {"conference": "Eastern", "division": "Central", "arena": "Fiserv Forum", "location": "ウィスコンシン州ミルウォーキー", "championships": 2},
+    "Minnesota Timberwolves": {"conference": "Western", "division": "Northwest", "arena": "Target Center", "location": "ミネソタ州ミネアポリス", "championships": 0},
+    "New Orleans Pelicans": {"conference": "Western", "division": "Southwest", "arena": "Smoothie King Center", "location": "ルイジアナ州ニューオーリンズ", "championships": 0},
+    "New York Knicks": {"conference": "Eastern", "division": "Atlantic", "arena": "Madison Square Garden", "location": "ニューヨーク州ニューヨーク", "championships": 2},
+    "Oklahoma City Thunder": {"conference": "Western", "division": "Northwest", "arena": "Paycom Center", "location": "オクラホマ州オクラホマシティ", "championships": 1},
+    "Orlando Magic": {"conference": "Eastern", "division": "Southeast", "arena": "Kia Center", "location": "フロリダ州オーランド", "championships": 0},
+    "Philadelphia 76ers": {"conference": "Eastern", "division": "Atlantic", "arena": "Wells Fargo Center", "location": "ペンシルベニア州フィラデルフィア", "championships": 3},
+    "Phoenix Suns": {"conference": "Western", "division": "Pacific", "arena": "Footprint Center", "location": "アリゾナ州フェニックス", "championships": 0},
+    "Portland Trail Blazers": {"conference": "Western", "division": "Northwest", "arena": "Moda Center", "location": "オレゴン州ポートランド", "championships": 1},
+    "Sacramento Kings": {"conference": "Western", "division": "Pacific", "arena": "Golden 1 Center", "location": "カリフォルニア州サクラメント", "championships": 1},
+    "San Antonio Spurs": {"conference": "Western", "division": "Southwest", "arena": "Frost Bank Center", "location": "テキサス州サンアントニオ", "championships": 5},
+    "Toronto Raptors": {"conference": "Eastern", "division": "Atlantic", "arena": "Scotiabank Arena", "location": "オンタリオ州トロント", "championships": 1},
+    "Utah Jazz": {"conference": "Western", "division": "Northwest", "arena": "Delta Center", "location": "ユタ州ソルトレイクシティ", "championships": 0},
+    "Washington Wizards": {"conference": "Eastern", "division": "Southeast", "arena": "Capital One Arena", "location": "ワシントンD.C.", "championships": 1}
+}
+
 STATS_TO_GENERATE = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
 TEAM_NAME_MAP = { "Atlanta": "Atlanta Hawks", "Boston": "Boston Celtics", "Brooklyn": "Brooklyn Nets", "Charlotte": "Charlotte Hornets", "Chicago": "Chicago Bulls", "Cleveland": "Cleveland Cavaliers", "Dallas": "Dallas Mavericks", "Denver": "Denver Nuggets", "Detroit": "Detroit Pistons", "Golden State": "Golden State Warriors", "Houston": "Houston Rockets", "Indiana": "Indiana Pacers", "LA Clippers": "LA Clippers", "LA Lakers": "Los Angeles Lakers", "Memphis": "Memphis Grizzlies", "Miami": "Miami Heat", "Milwaukee": "Milwaukee Bucks", "Minnesota": "Minnesota Timberwolves", "New Orleans": "New Orleans Pelicans", "New York": "New York Knicks", "Oklahoma City": "Oklahoma City Thunder", "Orlando": "Orlando Magic", "Philadelphia": "Philadelphia 76ers", "Phoenix": "Phoenix Suns", "Portland": "Portland Trail Blazers", "Sacramento": "Sacramento Kings", "San Antonio": "San Antonio Spurs", "Toronto": "Toronto Raptors", "Utah": "Utah Jazz", "Washington": "Washington Wizards" }
 
 
-# (generate_team_summary, get_footer_data, generate_main_index, generate_glossary_page は変更なし)
+# (以降の関数は変更ありません)
 def generate_team_summary(s1_stats, s2_stats):
     if s2_stats.empty: return ""
     STAT_INFO = { 'OFF EFF': {'jp': 'オフェンス'}, 'DEF EFF': {'jp': 'ディフェンス'}, 'PACE': {'jp': '試合のペース'} }
@@ -105,8 +139,6 @@ def generate_glossary_page(env, base_path):
     render_data = {'base_path': base_path, 'glossary_items': glossary_items, 'stat_pages': stat_pages, 'all_teams_structured': all_teams_structured, 'glossary_url': f'{base_path}/glossary.html'}
     with open("output/glossary.html", "w", encoding="utf-8") as f: f.write(template.render(render_data))
     print("--- 指標解説ページの生成完了 ---")
-
-
 def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_team_map, base_path):
     print("--- チーム別比較ページの生成開始 ---")
     df_s1_indexed = df_s1.set_index('Team')
@@ -122,8 +154,6 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_
 
     for team in all_teams:
         try:
-            # ★★★ 修正箇所 ★★★
-            # 依存するファイルリストを作成
             image_filename = team.replace(' ', '_')
             output_path = f"output/teams/comparison_{image_filename}.html"
             dependencies = [
@@ -133,7 +163,6 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_
                 "player_stats_2024-25.csv",
                 "templates/comparison_template.html"
             ]
-            # ファイルが最新なら処理をスキップ
             if is_file_up_to_date(output_path, dependencies):
                 print(f"スキップ: {output_path} は最新です。")
                 continue
@@ -166,8 +195,6 @@ def generate_comparison_pages(df_s1, df_s2, df_players, video_data, env, player_
             print(f"生成完了: {output_path}")
         except Exception as e: print(f"警告: {team} の比較ページ生成中にエラーが発生しました。詳細: {e}")
     print("--- チーム別比較ページの生成完了 ---")
-
-# (generate_stat_pages は変更なし)
 def generate_stat_pages(df_s1, df_s2, env, base_path):
     print("--- 指標別ランキングページの生成開始 ---")
     template = env.get_template('stat_comparison_template.html')
@@ -187,8 +214,6 @@ def generate_stat_pages(df_s1, df_s2, env, base_path):
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e: print(f"エラー: {stat_full} のページ生成中に問題が発生しました: {e}")
     print("--- 指標別ランキングページの生成完了 ---")
-
-
 def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map, base_path):
     print("--- 選手ページの生成開始 ---")
     if df_s1_raw is None or df_s2_raw is None:
@@ -196,7 +221,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         return
 
     def generate_player_comment(player_name, season_str_long, player_season_timeline):
-        # ... (この関数の内部は変更なし)
         if player_season_timeline.empty: return f"{player_name}選手の{season_str_long}シーズンの詳細な得点データはありません。"
         point_map = {'3PT': 3, '2PT': 2, 'FT': 1}; made_shots = player_season_timeline[player_season_timeline['MADE_FLAG'] == 1].copy()
         if made_shots.empty: return f"{player_name}選手は{season_str_long}シーズン、このデータセットでは得点記録がありません。"
@@ -222,7 +246,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
     for index, player_data in df_merged.iterrows():
         player_name = player_data.get('Player', 'Unknown')
         try:
-            # ★★★ 修正箇所 ★★★
             player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
             output_path = f"output/players/{player_filename}.html"
             dependencies = [
@@ -236,7 +259,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 continue
 
             has_s1_data = pd.notna(player_data.get('PTS_s1'))
-            # ... (以降のHTML生成ロジックは変更なし)
             stats_s2_table = pd.DataFrame(player_data.filter(like='_s2')).rename(index=lambda x: x.replace('_s2', ''))
             stats_s1_table = pd.DataFrame(player_data.filter(like='_s1')).rename(index=lambda x: x.replace('_s1', ''))
             team_name = player_team_map.get(player_name, ''); team_url = ""
@@ -303,8 +325,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             print(f"警告: {player_name} のページ生成中にエラー: {e}")
             traceback.print_exc()
     print("--- 選手ページの生成完了 ---")
-
-# (generate_season_player_index と if __name__ == "__main__": は変更なし)
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
     print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
     if df_current is None:
