@@ -291,24 +291,46 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
     print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
     template = env.get_template('season_player_index_template.html')
-    if df_current is None: return
-    if df_previous is None: df_previous = pd.DataFrame(columns=df_current.columns)
+    if df_current is None:
+        print(f"警告: {season_str}の選手データがないため、ランキングページをスキップします。")
+        return
+    if df_previous is None:
+        df_previous = pd.DataFrame(columns=df_current.columns)
 
     player_stats_to_show = {'PTS': '得点', 'REB': 'リバウンド', 'AST': 'アシスト'}
     df_merged = pd.merge(df_current, df_previous, on='Player', how='left', suffixes=('_current', '_previous'))
     leaders_by_stat = {}
+    
     for stat, name in player_stats_to_show.items():
-        # ... (rest of the logic is correct)
+        stat_key_current, stat_key_previous, stat_key_change = f'{stat}_current', f'{stat}_previous', f'{stat}_change'
+        for col in [stat_key_current, stat_key_previous]: 
+            df_merged[col] = pd.to_numeric(df_merged[col], errors='coerce')
+        df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
+        top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
+        
+        player_data_list = [] # ★★★ この一行が抜けていました ★★★
+        
+        for _, row in top_10_players.iterrows():
+            player_filename = re.sub(r'[^a-zA-Z0-9 -]', '', row['Player']).replace(' ', '-').lower()
+            player_url = f"{base_path}/players/{player_filename}.html"
+            player_data_list.append({
+                'Player': row['Player'], 
+                'url': player_url, 
+                'value': row[stat_key_current], 
+                'change': row[stat_key_change]
+            })
         leaders_by_stat[name] = player_data_list
 
     stat_pages_footer = get_footer_data(base_path)
     render_data = {
         'base_path': base_path, 'season_str': season_str,
-        'page_title': f"NBA {season_str}シーズン | 選手スタッツリーダー", 'meta_description': f"NBA {season_str}シーズンの主要スタッツ（得点、リバウンド、アシストなど）におけるトップ10選手ランキング。",
+        'page_title': f"NBA {season_str}シーズン | 選手スタッツリーダー", 
+        'meta_description': f"NBA {season_str}シーズンの主要スタッツ（得点、リバウンド、アシストなど）におけるトップ10選手ランキング。",
         'leaders_by_stat': leaders_by_stat, 'stat_pages': stat_pages_footer
     }
     output_path = f"output/{season_str}/index.html"
-    with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(template.render(render_data))
     print(f"--- {season_str}シーズン 選手ランキングページの生成完了 ---")
 
 if __name__ == "__main__":
