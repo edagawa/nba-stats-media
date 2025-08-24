@@ -31,10 +31,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Fetch latest YouTube videos
-        env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: python3 get_youtube_data.py
+      # - name: Fetch latest YouTube videos
+      #   env:
+      #     YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      #   run: python3 get_youtube_data.py
 
       - name: Fetch latest roster data
         run: python3 get_roster_data.py
