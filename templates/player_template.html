@@ -8,7 +8,7 @@
     {% include '_gtm_head.html' %}
     <link rel="stylesheet" href="{{ base_path }}/css/style.css">
 </head>
-<body class="{{ team_class }}">
+<body class="{{ team_class }}　team-common">
     {% include '_gtm_body.html' %}
     {% include '_header.html' %}
 
@@ -22,16 +22,6 @@
     <main class="container">
         <h2 class="section-title">シーズンスタッツ比較</h2>
         <div class="card-grid">
-             <div class="card">
-                <h3 class="card-title">2023-24シーズン</h3>
-                <table class="stats-table">
-                    <tbody>
-                    {% for stat, value in stats_s1.items() %}
-                        <tr><th>{{ stat }}</th><td>{{ value | default('-', true) }}</td></tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
             <div class="card">
                 <h3 class="card-title">2024-25シーズン</h3>
                 <table class="stats-table">
@@ -42,29 +32,20 @@
                     </tbody>
                 </table>
             </div>
+             <div class="card">
+                <h3 class="card-title">2023-24シーズン</h3>
+                <table class="stats-table">
+                    <tbody>
+                    {% for stat, value in stats_s1.items() %}
+                        <tr><th>{{ stat }}</th><td>{{ value | default('-', true) }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         {% if has_timeline_24_25 or has_timeline_23_24 or has_timeline_comparison %}
         <h2 class="section-title">時間帯別 得点分析</h2>
-        {% endif %}
-        
-        {% if has_timeline_comparison %}
-            <div class="graph-container">
-                <h3>得点差 (24-25 vs 23-24)</h3>
-                <figure>
-                    <img src="{{ base_path }}/images/players/timeline_diff_abs_{{ player_filename }}.svg" alt="{{ player_name }} 得点差 比較">
-                    <button class="zoom-btn" title="拡大表示">🔍</button>
-                </figure>
-                <p>2024-25シーズンと2023-24シーズンの1分毎の得点差を比較します。プラスの値は24-25シーズンの方が得点が多いことを示します。</p>
-            </div>
-            <div class="graph-container">
-                <h3>得点増減率 (%)</h3>
-                <figure>
-                    <img src="{{ base_path }}/images/players/timeline_diff_pct_{{ player_filename }}.svg" alt="{{ player_name }} 得点増減率 比較">
-                    <button class="zoom-btn" title="拡大表示">🔍</button>
-                </figure>
-                <p>2024-25シーズンの得点が2023-24シーズンからどのくらい変化したかをパーセンテージで示します。</p>
-            </div>
         {% endif %}
 
         {% if has_timeline_24_25 %}
@@ -87,6 +68,25 @@
             </figure>
             <p>{{ comment_23_24 }}</p>
         </div>
+        {% endif %}
+        
+        {% if has_timeline_comparison %}
+            <div class="graph-container">
+                <h3>得点差 (24-25 vs 23-24)</h3>
+                <figure>
+                    <img src="{{ base_path }}/images/players/timeline_diff_abs_{{ player_filename }}.svg" alt="{{ player_name }} 得点差 比較">
+                    <button class="zoom-btn" title="拡大表示">🔍</button>
+                </figure>
+                <p>2024-25シーズンと2023-24シーズンの1分毎の得点差を比較します。プラスの値は24-25シーズンの方が得点が多いことを示します。</p>
+            </div>
+            <div class="graph-container">
+                <h3>得点増減率 (%)</h3>
+                <figure>
+                    <img src="{{ base_path }}/images/players/timeline_diff_pct_{{ player_filename }}.svg" alt="{{ player_name }} 得点増減率 比較">
+                    <button class="zoom-btn" title="拡大表示">🔍</button>
+                </figure>
+                <p>2024-25シーズンの得点が2023-24シーズンからどのくらい変化したかをパーセンテージで示します。</p>
+            </div>
         {% endif %}
     </main>
 
