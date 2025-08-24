@@ -12,6 +12,7 @@ import re
 import json
 import unicodedata
 import traceback
+import shutil
 
 def is_file_up_to_date(output_path, dependencies):
     if not os.path.exists(output_path):
