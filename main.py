@@ -1,4 +1,4 @@
-# main.py (シーズン比較グラフ追加版)
+# main.py (グラフタイトル修正版)
 
 import os
 import sys
@@ -232,8 +232,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         else: comment_parts.append(f"{player_name}選手は、シーズンを通して安定したパフォーマンスを見せ、特に第{best_quarter}クォーターで最も多くの得点を記録しています。")
         comment_parts.append(f"強みは{primary_style}です。"); return " ".join(comment_parts)
     
-    # ★★★ 追加 ★★★ 
-    # 1分毎の得点データを集計するヘルパー関数
     def get_scoring_by_minute(timeline_df):
         made_shots = timeline_df[timeline_df['MADE_FLAG'] == 1].copy()
         if made_shots.empty:
@@ -284,11 +282,10 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 'has_s1_data': has_s1_data, 
                 'has_timeline_23_24': False, 
                 'has_timeline_24_25': False,
-                'has_timeline_comparison': False # ★★★ 追加 ★★★
+                'has_timeline_comparison': False
             }
 
             if has_s1_data:
-                # (シーズンスタッツ比較グラフの生成は変更なし)
                 graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s2 = graph_stats_s2_series.fillna(0).values
@@ -333,23 +330,21 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                     fig.tight_layout()
                     plt.savefig(f"output/images/players/timeline_stacked_23-24_{player_filename}.svg", format="svg"); plt.close(fig)
 
-            # ★★★ ここから新しいグラフ生成ブロック ★★★
             if render_data['has_timeline_23_24'] and render_data['has_timeline_24_25']:
                 scoring_23_24 = get_scoring_by_minute(timeline_data_23_24)
                 scoring_24_25 = get_scoring_by_minute(timeline_data_24_25)
 
                 if not scoring_23_24.empty and not scoring_24_25.empty:
                     render_data['has_timeline_comparison'] = True
-                    # 両方のDFを0-47分のindexで揃える
                     full_index = pd.Index(range(48), name='minute_bin')
                     scoring_23_24 = scoring_23_24.reindex(full_index, fill_value=0)
                     scoring_24_25 = scoring_24_25.reindex(full_index, fill_value=0)
                     
-                    # グラフ1: 得点差（実数）
+                    # ★★★ 修正箇所1 ★★★ タイトルを英語に変更
                     diff_abs = (scoring_24_25 - scoring_23_24)[['FT', '2PT', '3PT']]
                     fig, ax = plt.subplots(figsize=(12, 7))
                     diff_abs.plot(kind='bar', ax=ax, width=0.8, color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
-                    ax.set_title(f'{player_name} 得点差 (24-25 vs 23-24)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Point Difference')
+                    ax.set_title(f'{player_name} Point Difference (24-25 vs 23-24)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Point Difference')
                     ax.axhline(0, color='grey', linewidth=0.8)
                     ax.legend(title='Shot Type')
                     tick_labels = [item.get_text() for item in ax.get_xticklabels()]
@@ -358,13 +353,12 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                     fig.tight_layout()
                     plt.savefig(f"output/images/players/timeline_diff_abs_{player_filename}.svg", format="svg"); plt.close(fig)
 
-                    # グラフ2: 増減率
-                    # 0除算を避けるため、分母が0の場合は変化率を0とする
+                    # ★★★ 修正箇所2 ★★★ タイトルを英語に変更
                     diff_pct = (scoring_24_25 - scoring_23_24).divide(scoring_23_24.replace(0, np.nan)).fillna(0) * 100
                     diff_pct = diff_pct[['FT', '2PT', '3PT']]
                     fig, ax = plt.subplots(figsize=(12, 7))
                     diff_pct.plot(kind='bar', ax=ax, width=0.8, color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
-                    ax.set_title(f'{player_name} 得点増減率 (24-25 vs 23-24)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Percentage Change (%)')
+                    ax.set_title(f'{player_name} Percentage Change (24-25 vs 23-24)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Percentage Change (%)')
                     ax.axhline(0, color='grey', linewidth=0.8)
                     ax.legend(title='Shot Type')
                     tick_labels = [item.get_text() for item in ax.get_xticklabels()]
@@ -383,7 +377,6 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
     print("--- 選手ページの生成完了 ---")
 
 
-# (generate_season_player_index と if __name__ == "__main__": は変更なし)
 def generate_season_player_index(env, base_path, season_str, df_current, df_previous):
     print(f"--- {season_str}シーズン 選手ランキングページの生成開始 ---")
     if df_current is None:
