@@ -308,7 +308,7 @@ if __name__ == "__main__":
     generate_main_index(env, base_path, df_23_24, df_24_25, df_players_23_24, df_players_24_25, video_data)
     generate_glossary_page(env, base_path)
     generate_team_pages(df_23_24, df_24_25, df_players_24_25, video_data, env, player_team_map, base_path)
-    generate_stat_pages(df_23_24, df_24_25, env)
+    generate_stat_pages(df_23_24, df_24_25, env, base_path)
     generate_player_pages(env, scoring_timeline_data, df_players_23_24, df_players_24_25, player_team_map, base_path)
     generate_season_player_index(env, base_path, '2024-25', df_players_24_25, df_players_23_24)
     generate_season_player_index(env, base_path, '2023-24', df_players_23_24, df_players_24_25)
