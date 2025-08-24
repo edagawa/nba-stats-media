@@ -10,6 +10,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # ▼▼▼ 修正点1: ジョブに書き込み権限を付与します ▼▼▼
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,14 +23,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      # ▼▼▼ このステップを追加 ▼▼▼
-      - name: Cache generated output folder
-        uses: actions/cache@v4
-        with:
-          path: ./output
-          key: ${{ runner.os }}-output-${{ github.sha }} # コミットごとにキャッシュキーを更新
-          restore-keys: |
-            ${{ runner.os }}-output- # 最新のキャッシュを復元
+      # ▼▼▼ 修正点2: 不要なキャッシュのステップを削除しました ▼▼▼
+      # 古いビルド結果が残り、意図しないファイルがデプロイされるのを防ぎます。
 
       - name: Install dependencies
         run: |
@@ -44,11 +42,8 @@ jobs:
       - name: Generate static HTML pages
         run: python3 main.py
 
-      # ★★★ このステップを追加 ★★★
-      - name: Copy static assets
-        run: |
-          cp -r css output/
-          cp -r js output/
+      # ▼▼▼ 修正点3: 重複しているコピー処理を削除しました ▼▼▼
+      # この処理は main.py スクリプト内で行われるため不要です。
 
       - name: Verify generated files
         run: |
