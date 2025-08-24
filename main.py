@@ -12,6 +12,18 @@ import unicodedata
 import traceback
 import shutil
 
+def create_player_filename(player_name):
+    """選手名から安全なファイル名を生成する"""
+    s = str(player_name).strip()
+    # 既存のロジックをベースに、より安全なファイル名を生成する
+    filename = re.sub(r'[^a-zA-Z0-9 -]', '', s).replace(' ', '-').lower()
+    # 連続するハイフンを1つにまとめる
+    filename = re.sub(r'-+', '-', filename)
+    # 先頭と末尾のハイフンを削除
+    filename = filename.strip('-')
+    # 結果が空になった場合のフォールバック
+    return filename if filename else "unknown-player"
+
 def is_file_up_to_date(output_path, dependencies):
     if not os.path.exists(output_path):
         return False
@@ -101,7 +113,7 @@ def generate_main_index(env, base_path, df_teams_s1, df_teams_s2, df_players_s1,
             top_5_players = df_players_merged.sort_values(by=stat_key_s2, ascending=False).head(5)
             player_data_list = []
             for _, row in top_5_players.iterrows():
-                player_filename = re.sub(r'[^a-zA-Z0-9 -]', '', row['Player']).replace(' ', '-').lower()
+                player_filename = create_player_filename(row['Player'])
                 player_url = f"{base_path}/players/{player_filename}.html"
                 player_data_list.append({'Player': row['Player'], 'url': player_url, 'value': row[stat_key_s2], 'change': row[stat_key_change]})
             top_players_by_stat[name] = {'data': player_data_list, 'url': f"{base_path}/2024-25/index.html"}
@@ -162,7 +174,7 @@ def generate_team_pages(df_s1, df_s2, df_players, video_data, env, player_team_m
             if player_team_map:
                 for player_name, player_team in player_team_map.items():
                     if player_team == team and player_name in active_players_s2:
-                        player_filename_p = re.sub(r'[^a-zA-Z0-9 -]', '', player_name).replace(' ', '-').lower()
+                        player_filename_p = create_player_filename(player_name)
                         player_list.append({'name': player_name, 'url': f"{base_path}/players/{player_filename_p}.html"})
             
             video_id = video_data.get(team)
@@ -245,7 +257,7 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
     for index, player_data in df_merged.iterrows():
         player_name = player_data.get('Player', 'Unknown')
         try:
-            player_filename = re.sub(r'[^a-zA-Z0-9 -]', '', player_name).replace(' ', '-').lower()
+            player_filename = create_player_filename(player_name)
             output_path = f"output/players/{player_filename}.html"
             
             stats_s2_raw = player_data.filter(like='_s2').rename(lambda x: x.replace('_s2', ''))
@@ -279,7 +291,7 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 scoring_23_24 = get_scoring_by_minute(timeline_data_23_24)
                 scoring_24_25 = get_scoring_by_minute(timeline_data_24_25)
 
-                if not scoring_23_24.empty() and not scoring_24_25.empty():
+                if not scoring_23_24.empty and not scoring_24_25.empty:
                     render_data['has_timeline_comparison'] = True
             
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
@@ -308,10 +320,10 @@ def generate_season_player_index(env, base_path, season_str, df_current, df_prev
         df_merged[stat_key_change] = df_merged[stat_key_current] - df_merged[stat_key_previous].fillna(0)
         top_10_players = df_merged.sort_values(by=stat_key_current, ascending=False).head(10)
         
-        player_data_list = [] # ★★★ この一行が抜けていました ★★★
+        player_data_list = []
         
         for _, row in top_10_players.iterrows():
-            player_filename = re.sub(r'[^a-zA-Z0-9 -]', '', row['Player']).replace(' ', '-').lower()
+            player_filename = create_player_filename(row['Player'])
             player_url = f"{base_path}/players/{player_filename}.html"
             player_data_list.append({
                 'Player': row['Player'], 
