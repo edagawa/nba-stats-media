@@ -337,30 +337,55 @@ if __name__ == "__main__":
     print("--- HTML生成スクリプトを開始します ---")
     base_path = "/nba-stats-media"
     
-    os.makedirs("output", exist_ok=True)
-    
+    # サイトの全ディレクトリを確実に作成
+    os.makedirs("output/teams", exist_ok=True)
+    os.makedirs("output/images", exist_ok=True)
+    os.makedirs("output/stats", exist_ok=True)
+    os.makedirs("output/logos", exist_ok=True)
+    os.makedirs("output/css", exist_ok=True)
+    os.makedirs("output/js", exist_ok=True)
+    os.makedirs("output/players", exist_ok=True)
+    os.makedirs("output/images/players", exist_ok=True)
+    os.makedirs("output/2023-24", exist_ok=True)
+    os.makedirs("output/2024-25", exist_ok=True)
+    os.makedirs("output/images/season_leaders", exist_ok=True)
+    print("出力ディレクトリの準備が完了しました。")
+
     print("--- 静的ファイルのコピーを開始します ---")
-    for dir_name in ['css', 'js', 'logos']:
-        if os.path.exists(dir_name):
-            shutil.copytree(dir_name, f'output/{dir_name}', dirs_exist_ok=True)
+    if os.path.exists('css'):
+        shutil.copytree('css', 'output/css', dirs_exist_ok=True)
+    if os.path.exists('js'):
+        shutil.copytree('js', 'output/js', dirs_exist_ok=True)
+    if os.path.exists('logos'):
+        shutil.copytree('logos', 'output/logos', dirs_exist_ok=True)
     print("--- 静的ファイルのコピーが完了しました ---")
 
     try:
-        df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv"); df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
-        df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP); df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
-        df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']; df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
-        df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False); df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False); df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True)
+        df_23_24 = pd.read_csv("espn_team_stats_2023-24.csv")
+        df_24_25 = pd.read_csv("espn_team_stats_2024-25.csv")
+        df_23_24['Team'] = df_23_24['Team'].replace(TEAM_NAME_MAP)
+        df_24_25['Team'] = df_24_25['Team'].replace(TEAM_NAME_MAP)
+        df_23_24['NET EFF'] = df_23_24['OFF EFF'] - df_23_24['DEF EFF']
+        df_24_25['NET EFF'] = df_24_25['OFF EFF'] - df_24_25['DEF EFF']
+        df_24_25['PACE_rank'] = df_24_25['PACE'].rank(method='min', ascending=False)
+        df_24_25['OFF EFF_rank'] = df_24_25['OFF EFF'].rank(method='min', ascending=False)
+        df_24_25['DEF EFF_rank'] = df_24_25['DEF EFF'].rank(method='min', ascending=True)
     except FileNotFoundError as e:
-        print(f"エラー: チーム統計ファイルが見つかりません: {e}"); sys.exit(1)
+        print(f"エラー: チーム統計ファイルが見つかりません: {e}")
+        sys.exit(1)
     
+    df_players_23_24, df_players_24_25, player_team_map = None, None, {}
     try:
-        df_players_23_24 = pd.read_csv("player_stats_2023-24.csv"); df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
+        df_players_23_24 = pd.read_csv("player_stats_2023-24.csv")
+        df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
     except FileNotFoundError: df_players_23_24 = None
     try:
-        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv"); df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
+        df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
+        df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
     except FileNotFoundError: df_players_24_25 = None
     try:
-        roster_df = pd.read_csv("player_team_map.csv"); roster_df['Player'] = roster_df['Player'].apply(normalize_name)
+        roster_df = pd.read_csv("player_team_map.csv")
+        roster_df['Player'] = roster_df['Player'].apply(normalize_name)
         player_team_map = pd.Series(roster_df.Team.values, index=roster_df.Player).to_dict()
     except FileNotFoundError: player_team_map = {}
     try:
