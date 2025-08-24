@@ -1,4 +1,4 @@
-# main.py (グラフ修正版)
+# main.py (シーズン比較グラフ追加版)
 
 import os
 import sys
@@ -63,7 +63,7 @@ TEAM_DETAILS = {
 STATS_TO_GENERATE = { 'PACE': 'Pace', 'AST': 'Assist Ratio', 'TO': 'Turnover Ratio', 'ORR': 'Off Rebound Rate', 'DRR': 'Def Rebound Rate', 'TS%': 'True Shooting %', 'OFF EFF': 'Offensive Efficiency', 'DEF EFF': 'Defensive Efficiency', 'NET EFF': 'Net Rating' }
 TEAM_NAME_MAP = { "Atlanta": "Atlanta Hawks", "Boston": "Boston Celtics", "Brooklyn": "Brooklyn Nets", "Charlotte": "Charlotte Hornets", "Chicago": "Chicago Bulls", "Cleveland": "Cleveland Cavaliers", "Dallas": "Dallas Mavericks", "Denver": "Denver Nuggets", "Detroit": "Detroit Pistons", "Golden State": "Golden State Warriors", "Houston": "Houston Rockets", "Indiana": "Indiana Pacers", "LA Clippers": "LA Clippers", "LA Lakers": "Los Angeles Lakers", "Memphis": "Memphis Grizzlies", "Miami": "Miami Heat", "Milwaukee": "Milwaukee Bucks", "Minnesota": "Minnesota Timberwolves", "New Orleans": "New Orleans Pelicans", "New York": "New York Knicks", "Oklahoma City": "Oklahoma City Thunder", "Orlando": "Orlando Magic", "Philadelphia": "Philadelphia 76ers", "Phoenix": "Phoenix Suns", "Portland": "Portland Trail Blazers", "Sacramento": "Sacramento Kings", "San Antonio": "San Antonio Spurs", "Toronto": "Toronto Raptors", "Utah": "Utah Jazz", "Washington": "Washington Wizards" }
 
-# (generate_team_summary, get_footer_data, generate_main_index, generate_glossary_page, generate_comparison_pages, generate_stat_pages は変更なし)
+# (generate_team_summaryからgenerate_stat_pagesまでは変更なし)
 def generate_team_summary(s1_stats, s2_stats):
     if s2_stats.empty: return ""
     STAT_INFO = { 'OFF EFF': {'jp': 'オフェンス'}, 'DEF EFF': {'jp': 'ディフェンス'}, 'PACE': {'jp': '試合のペース'} }
@@ -208,7 +208,6 @@ def generate_stat_pages(df_s1, df_s2, env, base_path):
     print("--- 指標別ランキングページの生成完了 ---")
 
 
-# ★★★ この関数全体を修正 ★★★
 def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, player_team_map, base_path):
     print("--- 選手ページの生成開始 ---")
     if df_s1_raw is None or df_s2_raw is None:
@@ -232,6 +231,23 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
         elif best_quarter == 1 and (q1_points / total_points) > 0.3: comment_parts.append(f"{player_name}選手は、試合序盤から積極的に得点を狙うスタートダッシュ型の選手です。")
         else: comment_parts.append(f"{player_name}選手は、シーズンを通して安定したパフォーマンスを見せ、特に第{best_quarter}クォーターで最も多くの得点を記録しています。")
         comment_parts.append(f"強みは{primary_style}です。"); return " ".join(comment_parts)
+    
+    # ★★★ 追加 ★★★ 
+    # 1分毎の得点データを集計するヘルパー関数
+    def get_scoring_by_minute(timeline_df):
+        made_shots = timeline_df[timeline_df['MADE_FLAG'] == 1].copy()
+        if made_shots.empty:
+            return pd.DataFrame()
+        point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
+        made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
+        made_shots['minute_bin'] = np.floor(made_shots['absolute_minute'])
+        scoring_df = pd.pivot_table(
+            made_shots, values='POINTS', index='minute_bin', columns='SHOT_TYPE', aggfunc='sum'
+        ).fillna(0)
+        for col in ['FT', '2PT', '3PT']:
+            if col not in scoring_df.columns:
+                scoring_df[col] = 0
+        return scoring_df
 
     df_merged = pd.merge(df_s2_raw, df_s1_raw, on='Player', how='left', suffixes=('_s2', '_s1'))
     template = env.get_template('player_comparison_template.html')
@@ -244,10 +260,8 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             player_filename = re.sub(r'[\\/*?:"<>|]', "", player_name).replace(' ', '_')
             output_path = f"output/players/{player_filename}.html"
             dependencies = [
-                "player_stats_2023-24.csv",
-                "player_stats_2024-25.csv",
-                "player_scoring_timeline.csv",
-                "templates/player_comparison_template.html"
+                "player_stats_2023-24.csv", "player_stats_2024-25.csv",
+                "player_scoring_timeline.csv", "templates/player_comparison_template.html"
             ]
             if is_file_up_to_date(output_path, dependencies):
                 print(f"スキップ: {output_path} は最新です。")
@@ -269,10 +283,12 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 'glossary_url': f'{base_path}/glossary.html',
                 'has_s1_data': has_s1_data, 
                 'has_timeline_23_24': False, 
-                'has_timeline_24_25': False
+                'has_timeline_24_25': False,
+                'has_timeline_comparison': False # ★★★ 追加 ★★★
             }
 
             if has_s1_data:
+                # (シーズンスタッツ比較グラフの生成は変更なし)
                 graph_stats_s2_series = pd.to_numeric(stats_s2_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s1_series = pd.to_numeric(stats_s1_table.loc[stats_to_compare].squeeze(), errors='coerce')
                 graph_stats_s2 = graph_stats_s2_series.fillna(0).values
@@ -286,62 +302,76 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
                 plt.savefig(f"output/images/players/comparison_{player_filename}.svg", format="svg")
                 plt.close(fig)
 
-            # --- グラフ生成ロジックを全面的に修正 ---
-            for season_str_short in ["23-24", "24-25"]:
-                season_str_long = f"20{season_str_short}"
-                player_timeline = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == season_str_long)]
-                
-                if player_timeline.empty: continue
-                
-                if season_str_short == "23-24":
-                    render_data['has_timeline_23_24'] = True
-                    render_data['comment_23_24'] = generate_player_comment(player_name, season_str_long, player_timeline)
-                elif season_str_short == "24-25":
-                    render_data['has_timeline_24_25'] = True
-                    render_data['comment_24_25'] = generate_player_comment(player_name, season_str_long, player_timeline)
-                
-                made_shots = player_timeline[player_timeline['MADE_FLAG'] == 1].copy()
-                if not made_shots.empty:
-                    point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
-                    made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
-                    
-                    # 1分ごとの得点データを集計
-                    made_shots['minute_bin'] = np.floor(made_shots['absolute_minute'])
-                    scoring_by_minute = pd.pivot_table(
-                        made_shots,
-                        values='POINTS',
-                        index='minute_bin',
-                        columns='SHOT_TYPE',
-                        aggfunc='sum'
-                    ).fillna(0)
-                    
-                    # 棒グラフ用にカラムを整理
-                    for shot_type in ['FT', '2PT', '3PT']:
-                        if shot_type not in scoring_by_minute.columns:
-                            scoring_by_minute[shot_type] = 0
-                    
-                    scoring_by_minute = scoring_by_minute[['FT', '2PT', '3PT']] # 積み上げ順
-                    
-                    # 積み上げ棒グラフを生成
+            timeline_data_23_24 = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == '2023-24')]
+            timeline_data_24_25 = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == '2024-25')]
+            
+            if not timeline_data_24_25.empty:
+                render_data['has_timeline_24_25'] = True
+                render_data['comment_24_25'] = generate_player_comment(player_name, '2024-25', timeline_data_24_25)
+                scoring_24_25 = get_scoring_by_minute(timeline_data_24_25)
+                if not scoring_24_25.empty:
                     fig, ax = plt.subplots(figsize=(12, 7))
-                    scoring_by_minute.plot(kind='bar', stacked=True, ax=ax, width=0.8,
-                                           color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
-                    
-                    ax.set_title(f'{player_name} Scoring Timeline ({season_str_long})')
-                    ax.set_xlabel('Game Minute')
-                    ax.set_ylabel('Points Scored')
-                    ax.legend(title='Shot Type')
-                    ax.grid(True, axis='y', linestyle='--', alpha=0.6)
-                    
-                    # X軸のラベルを調整（多すぎると見づらくなるため）
+                    scoring_24_25[['FT', '2PT', '3PT']].plot(kind='bar', stacked=True, ax=ax, width=0.8, color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
+                    ax.set_title(f'{player_name} Scoring Timeline (2024-25)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Points Scored'); ax.legend(title='Shot Type'); ax.grid(True, axis='y', linestyle='--', alpha=0.6)
                     tick_labels = [item.get_text() for item in ax.get_xticklabels()]
                     new_tick_labels = [label if int(float(label)) % 5 == 0 or int(float(label)) in [11, 23, 35, 47] else '' for label in tick_labels]
                     ax.set_xticklabels(new_tick_labels, rotation=45)
-                    
                     fig.tight_layout()
-                    graph_path = f"output/images/players/timeline_stacked_{season_str_short}_{player_filename}.svg"
-                    plt.savefig(graph_path, format="svg")
-                    plt.close(fig)
+                    plt.savefig(f"output/images/players/timeline_stacked_24-25_{player_filename}.svg", format="svg"); plt.close(fig)
+            
+            if not timeline_data_23_24.empty:
+                render_data['has_timeline_23_24'] = True
+                render_data['comment_23_24'] = generate_player_comment(player_name, '2023-24', timeline_data_23_24)
+                scoring_23_24 = get_scoring_by_minute(timeline_data_23_24)
+                if not scoring_23_24.empty:
+                    fig, ax = plt.subplots(figsize=(12, 7))
+                    scoring_23_24[['FT', '2PT', '3PT']].plot(kind='bar', stacked=True, ax=ax, width=0.8, color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
+                    ax.set_title(f'{player_name} Scoring Timeline (2023-24)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Points Scored'); ax.legend(title='Shot Type'); ax.grid(True, axis='y', linestyle='--', alpha=0.6)
+                    tick_labels = [item.get_text() for item in ax.get_xticklabels()]
+                    new_tick_labels = [label if int(float(label)) % 5 == 0 or int(float(label)) in [11, 23, 35, 47] else '' for label in tick_labels]
+                    ax.set_xticklabels(new_tick_labels, rotation=45)
+                    fig.tight_layout()
+                    plt.savefig(f"output/images/players/timeline_stacked_23-24_{player_filename}.svg", format="svg"); plt.close(fig)
+
+            # ★★★ ここから新しいグラフ生成ブロック ★★★
+            if render_data['has_timeline_23_24'] and render_data['has_timeline_24_25']:
+                scoring_23_24 = get_scoring_by_minute(timeline_data_23_24)
+                scoring_24_25 = get_scoring_by_minute(timeline_data_24_25)
+
+                if not scoring_23_24.empty and not scoring_24_25.empty:
+                    render_data['has_timeline_comparison'] = True
+                    # 両方のDFを0-47分のindexで揃える
+                    full_index = pd.Index(range(48), name='minute_bin')
+                    scoring_23_24 = scoring_23_24.reindex(full_index, fill_value=0)
+                    scoring_24_25 = scoring_24_25.reindex(full_index, fill_value=0)
+                    
+                    # グラフ1: 得点差（実数）
+                    diff_abs = (scoring_24_25 - scoring_23_24)[['FT', '2PT', '3PT']]
+                    fig, ax = plt.subplots(figsize=(12, 7))
+                    diff_abs.plot(kind='bar', ax=ax, width=0.8, color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
+                    ax.set_title(f'{player_name} 得点差 (24-25 vs 23-24)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Point Difference')
+                    ax.axhline(0, color='grey', linewidth=0.8)
+                    ax.legend(title='Shot Type')
+                    tick_labels = [item.get_text() for item in ax.get_xticklabels()]
+                    new_tick_labels = [label if int(float(label)) % 5 == 0 or int(float(label)) in [11, 23, 35, 47] else '' for label in tick_labels]
+                    ax.set_xticklabels(new_tick_labels, rotation=45)
+                    fig.tight_layout()
+                    plt.savefig(f"output/images/players/timeline_diff_abs_{player_filename}.svg", format="svg"); plt.close(fig)
+
+                    # グラフ2: 増減率
+                    # 0除算を避けるため、分母が0の場合は変化率を0とする
+                    diff_pct = (scoring_24_25 - scoring_23_24).divide(scoring_23_24.replace(0, np.nan)).fillna(0) * 100
+                    diff_pct = diff_pct[['FT', '2PT', '3PT']]
+                    fig, ax = plt.subplots(figsize=(12, 7))
+                    diff_pct.plot(kind='bar', ax=ax, width=0.8, color={'FT': '#FFC107', '2PT': '#2196F3', '3PT': '#4CAF50'})
+                    ax.set_title(f'{player_name} 得点増減率 (24-25 vs 23-24)'); ax.set_xlabel('Game Minute'); ax.set_ylabel('Percentage Change (%)')
+                    ax.axhline(0, color='grey', linewidth=0.8)
+                    ax.legend(title='Shot Type')
+                    tick_labels = [item.get_text() for item in ax.get_xticklabels()]
+                    new_tick_labels = [label if int(float(label)) % 5 == 0 or int(float(label)) in [11, 23, 35, 47] else '' for label in tick_labels]
+                    ax.set_xticklabels(new_tick_labels, rotation=45)
+                    fig.tight_layout()
+                    plt.savefig(f"output/images/players/timeline_diff_pct_{player_filename}.svg", format="svg"); plt.close(fig)
 
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(template.render(render_data))
