@@ -252,6 +252,15 @@ if __name__ == "__main__":
     os.makedirs("output/2024-25", exist_ok=True)
     os.makedirs("output/images/season_leaders", exist_ok=True)
     print("出力ディレクトリの準備が完了しました。")
+    # 静的ファイル（CSS, JS, ロゴ）をoutputディレクトリにコピー
+    print("--- 静的ファイルのコピーを開始します ---")
+    if os.path.exists('css'):
+        shutil.copytree('css', 'output/css', dirs_exist_ok=True)
+    if os.path.exists('js'):
+        shutil.copytree('js', 'output/js', dirs_exist_ok=True)
+    if os.path.exists('logos'):
+        shutil.copytree('logos', 'output/logos', dirs_exist_ok=True)
+    print("--- 静的ファイルのコピーが完了しました ---")
 
     # チーム統計データの読み込み
     df_23_24, df_24_25 = None, None
