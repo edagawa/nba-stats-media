@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>{{ page_title }}</title>  
-    <meta name="description" content="{{ meta_description }}">
+    <title>NBA Stats Media - チーム＆選手スタッツ比較サイト</title>  
+    <meta name="description" content="NBAのチームと選手の詳細なスタッツを比較・分析。2023-24シーズンと2024-25シーズンのデータを基に、パフォーマンスの変動や特徴を可視化します。">
     {% include '_gtm_head.html' %}
     <link rel="stylesheet" href="{{ base_path }}/css/style.css">
 </head>
@@ -20,7 +20,7 @@
 
     <main class="container">
         {% if main_video_embed_url %}
-        <section class="video-section" style="margin-bottom: calc(var(--spacing-unit) * 4);">
+        <section style="margin-bottom: calc(var(--spacing-unit) * 4);">
             <h2 class="section-title">NBA 最新ハイライト</h2>
             <div class="video-container">
                 <iframe src="{{ main_video_embed_url }}" title="NBA公式 最新YouTube動画" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -28,11 +28,11 @@
         </section>
         {% endif %}
 
-        <h2 class="section-title">2024-25シーズン スタッツリーダー</h2>
+        <h2 class="section-title">2024-25シーズン スタッツリーダー Top 5</h2>
         <div class="card-grid">
             {% for stat_name, leaders in top_players_by_stat.items() %}
             <div class="card">
-                <h3 class="card-title"><a href="{{ leaders.url }}">{{ stat_name }} Top 5</a></h3>
+                <h3 class="card-title"><a href="{{ leaders.url }}">{{ stat_name }}</a></h3>
                 <table class="stats-table">
                     <tbody>
                         {% for player in leaders.data %}
@@ -53,7 +53,7 @@
 
             {% for stat_name, leaders in top_teams_by_stat.items() %}
             <div class="card">
-                <h3 class="card-title"><a href="{{ leaders.url }}">{{ stat_name }} Top 5</a></h3>
+                <h3 class="card-title"><a href="{{ leaders.url }}">{{ stat_name }}</a></h3>
                 <table class="stats-table">
                      <tbody>
                         {% for team in leaders.data %}

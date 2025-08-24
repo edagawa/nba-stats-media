@@ -84,11 +84,19 @@
                 </table>
             </div>
         </div>
+
+        <div class="graph-container">
+             <h3>主要指標の変化</h3>
+            <figure>
+                <img src="{{ base_path }}/images/comparison_{{ team_name.replace(' ', '_') }}.svg" alt="{{ team_name }} シーズン比較グラフ">
+                <button class="zoom-btn" title="拡大表示">🔍</button>
+            </figure>
+        </div>
         
         <h2 class="section-title">所属選手 (2024-25)</h2>
         <div class="card">
              {% if player_list %}
-                <ul class="roster-list" style="list-style: none; display: flex; flex-wrap: wrap; gap: 10px;">
+                <ul class="roster-list" style="list-style: none; display: flex; flex-wrap: wrap; gap: 10px; padding: 0;">
                 {% for player in player_list %}
                     <li style="background: var(--color-background); padding: 5px 10px; border-radius: 5px;"><a href="{{ player.url }}">{{ player.name }}</a></li>
                 {% endfor %}

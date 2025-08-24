@@ -1,36 +1,13 @@
-<footer>
-    <div class="footer-container">
-        <h2>他の情報を見る</h2>
-        <div class="footer-nav-section" id="team-links">
-            <h3>チーム別比較</h3>
-            {% for conf, divisions in all_teams_structured.items() %}
-                <h4>{{ conf }}</h4>
-                {% for div, teams in divisions.items() %}
-                    <div class="division-group">
-                        <h5>{{ div }}</h5>
-                        <ul>
-                            {% for team in teams %}
-                            <li><a href="{{ team.url }}">{{ team.name }}</a></li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endfor %}
-            {% endfor %}
-        </div>
-
-        <div class="footer-nav-section" id="stat-links">
-            <h3>指標別ランキング</h3>
-            <ul>
-                {% for stat in stat_pages %}
-                <li><a href="{{ stat.url }}">{{ stat.name }}</a></li>
-                {% endfor %}
-            </ul>
-            <div class="glossary-link">
-                <a href="{{ glossary_url }}">指標の解説 (Glossary) はこちら</a>
-            </div>
-        </div>
-    </div>
-    <div class="copyright">
-        <p>&copy; 2025 nba-stats-media. All Rights Reserved.</p>
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2024 NBA Stats Media. All rights reserved.</p>
     </div>
 </footer>
+
+<div class="modal">
+    <button class="modal-close">&times;</button>
+    <div class="modal-content">
+        </div>
+</div>
+
+<script src="{{ base_path }}/js/main.js"></script>

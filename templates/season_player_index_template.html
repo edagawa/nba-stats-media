@@ -14,18 +14,13 @@
     <main class="container">
         <h1 class="section-title">{{ season_str }}シーズン 選手スタッツリーダー</h1>
         <p style="text-align: center; max-width: 800px; margin: -20px auto 40px; color: var(--color-text-secondary);">
-            このページでは、{{ season_str }}シーズンの主要カテゴリにおける個人成績トップ10の選手と、そのスタッツを前年と比較したグラフを掲載しています。
+            このページでは、{{ season_str }}シーズンの主要カテゴリにおける個人成績トップ10の選手を掲載しています。
         </p>
         
-        {% for stat_info in leaders_with_graphs %}
-        <div class="graph-container">
-            <h3>{{ stat_info.stat_jp }} Top 10</h3>
-            <figure>
-                <img src="{{ base_path }}/images/season_leaders/{{ season_str }}_{{ stat_info.stat_en }}.svg" alt="{{ season_str }}シーズン {{ stat_info.stat_jp }} トップ10選手の前年比較グラフ">
-                 <button class="zoom-btn" title="拡大表示">🔍</button>
-            </figure>
-
-            <div class="card" style="margin-top: 20px;">
+        <div class="card-grid">
+            {% for stat_name, players in leaders_by_stat.items() %}
+            <div class="card">
+                <h3 class="card-title">{{ stat_name }} Top 10</h3>
                 <table class="stats-table">
                     <thead>
                         <tr>
@@ -36,7 +31,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for player in stat_info.data %}
+                        {% for player in players %}
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td><a href="{{ player.url }}">{{ player.Player }}</a></td>
@@ -52,8 +47,8 @@
                     </tbody>
                 </table>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </main>
     {% include '_footer.html' %}
 </body>
