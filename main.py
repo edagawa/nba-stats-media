@@ -12,16 +12,79 @@ import unicodedata
 import traceback
 import shutil
 
+### ▼▼▼ NEW HELPER FUNCTIONS START ▼▼▼ ###
+
+def plot_player_scoring_timeline(scoring_df, title, output_path):
+    """選手の時間帯別得点（積み上げ棒グラフ）をプロットして保存する"""
+    if scoring_df.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # 3PT, 2PT, FTの順で積み上げるための準備
+    ft_points = scoring_df['FT']
+    pt2_points = scoring_df['2PT']
+    pt3_points = scoring_df['3PT']
+
+    minutes = scoring_df.index
+    
+    # 積み上げ棒グラフを描画
+    ax.bar(minutes, pt3_points, color='#ef4444', label='3PT', width=1.0)
+    ax.bar(minutes, pt2_points, bottom=pt3_points, color='#3b82f6', label='2PT', width=1.0)
+    ax.bar(minutes, ft_points, bottom=pt3_points + pt2_points, color='#22c55e', label='FT', width=1.0)
+
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel('Game Minute', fontsize=12)
+    ax.set_ylabel('Points Scored', fontsize=12)
+    ax.set_xticks(np.arange(0, 49, 6)) # 0, 6, 12...48分に目盛りを設定
+    ax.set_xlim(-0.5, 48.5)
+    ax.legend()
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    fig.tight_layout()
+    plt.savefig(output_path, format="svg")
+    plt.close(fig)
+
+def plot_player_comparison_graph(s1_total, s2_total, title, ylabel, output_path):
+    """2シーズン間の選手得点比較グラフ（差分または増減率）をプロットして保存する"""
+    comparison_df = pd.DataFrame({'s1': s1_total, 's2': s2_total}).fillna(0)
+    
+    if ylabel == 'Point Difference':
+        comparison_df['diff'] = comparison_df['s2'] - comparison_df['s1']
+    else: # Percentage Change
+        # 0除算を避ける
+        comparison_df['diff'] = ((comparison_df['s2'] - comparison_df['s1']) / comparison_df['s1'].replace(0, 1)) * 100
+        # s1が0でs2が > 0 の場合、大きな正の値になるのでキャップする
+        comparison_df.loc[(comparison_df['s1'] == 0) & (comparison_df['s2'] > 0), 'diff'] = 200 
+        comparison_df['diff'] = comparison_df['diff'].replace([np.inf, -np.inf], 0)
+
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    colors = ['#ef4444' if x < 0 else '#22c55e' for x in comparison_df['diff']]
+    ax.bar(comparison_df.index, comparison_df['diff'], color=colors, width=1.0)
+
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel('Game Minute', fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_xticks(np.arange(0, 49, 6))
+    ax.set_xlim(-0.5, 48.5)
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+    fig.tight_layout()
+    plt.savefig(output_path, format="svg")
+    plt.close(fig)
+
+### ▲▲▲ NEW HELPER FUNCTIONS END ▲▲▲ ###
+
+
 def create_player_filename(player_name):
     """選手名から安全なファイル名を生成する"""
     s = str(player_name).strip()
-    # 既存のロジックをベースに、より安全なファイル名を生成する
     filename = re.sub(r'[^a-zA-Z0-9 -]', '', s).replace(' ', '-').lower()
-    # 連続するハイフンを1つにまとめる
     filename = re.sub(r'-+', '-', filename)
-    # 先頭と末尾のハイフンを削除
     filename = filename.strip('-')
-    # 結果が空になった場合のフォールバック
     return filename if filename else "unknown-player"
 
 def is_file_up_to_date(output_path, dependencies):
@@ -241,13 +304,17 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
     
     def get_scoring_by_minute(timeline_df):
         made_shots = timeline_df[timeline_df['MADE_FLAG'] == 1].copy()
-        if made_shots.empty: return pd.DataFrame()
+        if made_shots.empty: return pd.DataFrame(columns=['FT', '2PT', '3PT'])
         point_map = {'3PT': 3, '2PT': 2, 'FT': 1}
         made_shots['POINTS'] = made_shots['SHOT_TYPE'].map(point_map)
         made_shots['minute_bin'] = np.floor(made_shots['absolute_minute'])
         scoring_df = pd.pivot_table(made_shots, values='POINTS', index='minute_bin', columns='SHOT_TYPE', aggfunc='sum').fillna(0)
+        # 必要な列を確実に追加
         for col in ['FT', '2PT', '3PT']:
             if col not in scoring_df.columns: scoring_df[col] = 0
+        # 0分から47分までのインデックスを確保
+        all_minutes = pd.Index(np.arange(48), name='minute_bin')
+        scoring_df = scoring_df.reindex(all_minutes, fill_value=0)
         return scoring_df
 
     df_merged = pd.merge(df_s2_raw, df_s1_raw, on='Player', how='left', suffixes=('_s2', '_s1'))
@@ -279,20 +346,46 @@ def generate_player_pages(env, scoring_timeline_data, df_s1_raw, df_s2_raw, play
             timeline_data_23_24 = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == '2023-24')]
             timeline_data_24_25 = scoring_timeline_data[(scoring_timeline_data['Player'] == player_name) & (scoring_timeline_data['Season'] == '2024-25')]
             
+            scoring_23_24 = pd.DataFrame()
+            scoring_24_25 = pd.DataFrame()
+
             if not timeline_data_24_25.empty:
                 render_data['has_timeline_24_25'] = True
                 render_data['comment_24_25'] = generate_player_comment(player_name, '2024-25', timeline_data_24_25)
-            
+                scoring_24_25 = get_scoring_by_minute(timeline_data_24_25)
+                plot_player_scoring_timeline(
+                    scoring_24_25, 
+                    f'Scoring Timeline: {player_name} (2024-25)', 
+                    f"output/images/players/timeline_points_24-25_{player_filename}.svg"
+                )
+
             if not timeline_data_23_24.empty:
                 render_data['has_timeline_23_24'] = True
                 render_data['comment_23_24'] = generate_player_comment(player_name, '2023-24', timeline_data_23_24)
-
-            if render_data['has_timeline_23_24'] and render_data['has_timeline_24_25']:
                 scoring_23_24 = get_scoring_by_minute(timeline_data_23_24)
-                scoring_24_25 = get_scoring_by_minute(timeline_data_24_25)
+                plot_player_scoring_timeline(
+                    scoring_23_24,
+                    f'Scoring Timeline: {player_name} (2023-24)',
+                    f"output/images/players/timeline_points_23-24_{player_filename}.svg"
+                )
 
-                if not scoring_23_24.empty and not scoring_24_25.empty:
-                    render_data['has_timeline_comparison'] = True
+            if not scoring_23_24.empty and not scoring_24_25.empty:
+                render_data['has_timeline_comparison'] = True
+                s1_total = scoring_23_24.sum(axis=1)
+                s2_total = scoring_24_25.sum(axis=1)
+                
+                plot_player_comparison_graph(
+                    s1_total, s2_total, 
+                    f'Point Difference per Minute: {player_name} (24-25 vs 23-24)', 
+                    'Point Difference', 
+                    f"output/images/players/timeline_diff_abs_{player_filename}.svg"
+                )
+                plot_player_comparison_graph(
+                    s1_total, s2_total,
+                    f'Point Pct Change per Minute: {player_name} (24-25 vs 23-24)',
+                    'Percentage Change (%)',
+                    f"output/images/players/timeline_diff_pct_{player_filename}.svg"
+                )
             
             with open(output_path, "w", encoding="utf-8") as f: f.write(template.render(render_data))
         except Exception as e:
@@ -390,11 +483,11 @@ if __name__ == "__main__":
     try:
         df_players_23_24 = pd.read_csv("player_stats_2023-24.csv")
         df_players_23_24['Player'] = df_players_23_24['Player'].apply(normalize_name)
-    except FileNotFoundError: df_players_23_24 = None
+    except FileNotFoundError: df_players_23_24 = pd.DataFrame()
     try:
         df_players_24_25 = pd.read_csv("player_stats_2024-25.csv")
         df_players_24_25['Player'] = df_players_24_25['Player'].apply(normalize_name)
-    except FileNotFoundError: df_players_24_25 = None
+    except FileNotFoundError: df_players_24_25 = pd.DataFrame()
     try:
         roster_df = pd.read_csv("player_team_map.csv")
         roster_df['Player'] = roster_df['Player'].apply(normalize_name)
