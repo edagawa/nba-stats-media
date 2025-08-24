@@ -33,6 +33,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Verify source directories exist
+        run: |
+          echo "--- Checking repository root contents ---"
+          ls -l
+
+      - name: Run main.py to generate site
+        run: python main.py
+
       - name: Fetch latest YouTube videos
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
